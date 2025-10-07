@@ -13,5 +13,7 @@ node server.js
 ```
 
 ## FRONTEND
-
+```bash
+npm i
+```
 ## DATABASE INIT
