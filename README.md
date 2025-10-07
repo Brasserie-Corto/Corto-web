@@ -1,10 +1,15 @@
 # Corto-web
 
 ## BACKEND
-- Define the .env variables (check the keys in the .env-example file)
-- Start the backend server
+### In the backend folder
+- Execute the command: 
+```bash
+npm i
+```
+- Define the environment variables in a .env file (e.g. check the keys in the .env-example file)
+- Start the backend server with the command:
 ```bash 
-node backend/server.js
+node server.js
 ```
 
 ## FRONTEND
