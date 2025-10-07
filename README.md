@@ -13,7 +13,13 @@ node server.js
 ```
 
 ## FRONTEND
+### In the frontend folder
 ```bash
 npm i
 ```
+- Start the frontend server with the command:
+```bash 
+npm run dev
+```
+
 ## DATABASE INIT
