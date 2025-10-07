@@ -2,7 +2,7 @@
 
 ## BACKEND
 ### In the backend folder
-- Execute the command: 
+- Install the dependencies with the command: 
 ```bash
 npm i
 ```
@@ -14,6 +14,7 @@ node server.js
 
 ## FRONTEND
 ### In the frontend folder
+- Install the dependencies with the command: 
 ```bash
 npm i
 ```
