@@ -97,4 +97,4 @@ export const beers: Beer[] = [
 
 export const beerTypes = [...new Set(beers.map(b => b.type))];
 export const beerColors = [...new Set(beers.map(b => b.color))];
-export const maxPrice = Math.ceil(Math.max(...beers.map(b => b.price)));
+export const maxPrice = 20;
