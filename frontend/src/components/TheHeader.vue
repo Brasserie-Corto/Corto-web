@@ -10,10 +10,10 @@ const router = useRouter();
 
 const isAdmin = computed(() => authStore.user?.role === 'admin');
 
-const handleLogout = () => {
-  authStore.logout();
-  // Redirect to home page after logout
-  router.push('/');
+const handleLogout = async () => {
+  await authStore.logout();
+  // Redirect to auth page after logout (will also be handled by router guard)
+  await router.push('/auth');
 };
 </script>
 
@@ -26,7 +26,8 @@ const handleLogout = () => {
         <router-link to="/about">About</router-link>
         <router-link to="/live">Live Stream</router-link>
         <router-link to="/contact">Contact</router-link>
-        <router-link v-if="isAdmin" to="/admin" class="admin-link">Admin</router-link>
+        <router-link to="/dashboard">Dashboard</router-link>
+        <router-link v-if="isAdmin" to="/admin">Admin</router-link>
       </nav>
       <div class="actions">
         <div v-if="authStore.isLoggedIn" class="auth-actions">
