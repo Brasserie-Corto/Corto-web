@@ -23,7 +23,7 @@ const cartStore = useCartStore();
         <span aria-hidden="true">|</span>
         <span>{{ beer.color }}</span>
       </div>
-      <p class="beer-price">${{ beer.price.toFixed(2) }}</p>
+      <p class="beer-price">{{ beer.price.toFixed(2) }}€</p>
       <button @click="cartStore.addItem(beer)" :disabled="!beer.inStock">
         Add to Cart
       </button>

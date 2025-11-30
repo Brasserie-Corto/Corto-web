@@ -16,7 +16,7 @@ const filters = defineModel('filters');
   <aside class="filters-sidebar card">
     <h3>Filters</h3>
     <div class="filter-group">
-      <label for="price-range">Max Price: ${{ filters.price }}</label>
+      <label for="price-range">Max Price: {{ filters.price }}€</label>
       <input 
         type="range" 
         id="price-range" 
