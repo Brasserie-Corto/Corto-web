@@ -2,10 +2,13 @@
 import { useRouter } from 'vue-router';
 import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
+import { computed } from 'vue';
 
 const cartStore = useCartStore();
 const authStore = useAuthStore();
 const router = useRouter();
+
+const isAdmin = computed(() => authStore.user?.role === 'admin');
 
 const handleLogout = () => {
   authStore.logout();
@@ -23,6 +26,7 @@ const handleLogout = () => {
         <router-link to="/about">About</router-link>
         <router-link to="/live">Live Stream</router-link>
         <router-link to="/contact">Contact</router-link>
+        <router-link v-if="isAdmin" to="/admin" class="admin-link">Admin</router-link>
       </nav>
       <div class="actions">
         <div v-if="authStore.isLoggedIn" class="auth-actions">
