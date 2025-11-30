@@ -3,42 +3,16 @@ import { ref, computed, onMounted } from 'vue';
 import BeerCard from '@/components/BeerCard.vue';
 import BeerFilters from '@/components/BeerFilters.vue';
 import type { Beer } from '@/types';
-import { createClient } from '@supabase/supabase-js'
-import env from "dotenv";
-
-// 1. Initialisation du client Supabase
-// Note: Idéalement, mets ces clés dans un fichier .env (voir note en bas)
-const supabase = createClient(
-  "http://localhost:8000", 
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE"
-)
 
 const beers = ref<Beer[]>([]); 
 
 onMounted(async () => {
-  const { data, error } = await supabase
-    .from('detailed_recipes') 
-    .select('*');
-
-  if (error) {
+  try {
+    const response = await fetch('http://localhost:8080/beers');
+    if (!response.ok) throw new Error('Failed to fetch beers');
+    beers.value = await response.json();
+  } catch (error) {
     console.error('Erreur:', error);
-  } else if (data) {
-    beers.value = data.map((beer: any) => {
-      
-      const { data: imageData } = supabase
-        .storage
-        .from('beers')
-        .getPublicUrl(`images/main/${beer.id}.png`);
-
-      return {
-        ...beer,
-        imageUrl: imageData.publicUrl,
-        // On s'assure que quantity est un nombre (au cas où ce soit null)
-        total_quantity: beer.total_quantity || 0,
-        // On recrée le booléen pour le composant BeerCard ! IMPORTANT
-        inStock: (beer.total_quantity || 0) > 0 
-      };
-    });
   }
 });
 

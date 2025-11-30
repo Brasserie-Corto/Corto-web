@@ -1,10 +1,16 @@
 {
-  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "ws": "node ws-server.js",
+    "start": "node server.js"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.74.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
-    "express-session": "^1.18.2"
+    "express-session": "^1.18.2",
+    "pg": "^8.16.3",
+    "ws": "^8.18.3"
   }
 }
