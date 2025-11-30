@@ -8,6 +8,7 @@ export interface Beer {
   color: BeerColor;
   price: number;
   imageUrl: string;
+  total_quantity: number;
   inStock: boolean;
 }
 
