@@ -4,7 +4,6 @@ import BeerCard from '@/components/BeerCard.vue';
 import BeerFilters from '@/components/BeerFilters.vue';
 import type { Beer } from '@/types';
 import { createClient } from '@supabase/supabase-js'
-import env from "dotenv";
 
 // 1. Initialisation du client Supabase
 // Note: Idéalement, mets ces clés dans un fichier .env (voir note en bas)

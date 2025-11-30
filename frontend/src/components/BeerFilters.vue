@@ -1,5 +1,13 @@
+
 <script setup lang="ts">
-import { beerTypes, beerColors, maxPrice } from '@/data/beers';
+import { ref, computed, onMounted } from 'vue';
+import { getBeerColors, maxPrice } from '@/data/beers';
+
+const beerColors = ref<string[]>([]);
+onMounted(async () => {
+  // load colors available currently
+  beerColors.value = await getBeerColors();
+});
 
 const filters = defineModel('filters');
 </script>
@@ -17,14 +25,6 @@ const filters = defineModel('filters');
         step="0.5"
         v-model.number="filters.price" 
       />
-    </div>
-
-    <div class="filter-group">
-      <h4>Type</h4>
-      <div v-for="type in beerTypes" :key="type" class="checkbox-group">
-        <input type="checkbox" :id="type" :value="type" v-model="filters.types" />
-        <label :for="type">{{ type }}</label>
-      </div>
     </div>
     
     <div class="filter-group">
