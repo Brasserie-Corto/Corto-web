@@ -1,5 +1,5 @@
 export type BeerType = 'IPA' | 'Stout' | 'Lager' | 'Pale Ale' | 'Pilsner' | 'Sour';
-export type BeerColor = 'Blonde' | 'Amber' | 'Brown' | 'Dark';
+export type BeerColor = 'blonde' | 'ambrée' | 'brune' | 'noire' | 'blanche';
 
 export interface Beer {
   id: number;

@@ -13,7 +13,7 @@ const cartStore = useCartStore();
           <img :src="item.beer.imageUrl" :alt="item.beer.name" class="item-image" />
           <div class="item-details">
             <h3>{{ item.beer.name }}</h3>
-            <p class="item-price">${{ item.beer.price.toFixed(2) }}</p>
+            <p class="item-price">{{ item.beer.price.toFixed(2) }}€</p>
           </div>
           <div class="item-quantity">
             <button @click="cartStore.decreaseQuantity(item.beer.id)" class="quantity-btn">-</button>
@@ -21,7 +21,7 @@ const cartStore = useCartStore();
             <button @click="cartStore.addItem(item.beer)" class="quantity-btn">+</button>
           </div>
           <div class="item-subtotal">
-            <p>${{ (item.beer.price * item.quantity).toFixed(2) }}</p>
+            <p>{{ (item.beer.price * item.quantity).toFixed(2) }}€</p>
           </div>
           <div class="item-remove">
             <button @click="cartStore.removeItem(item.beer.id)" class="remove-btn" aria-label="Remove item">
@@ -31,7 +31,7 @@ const cartStore = useCartStore();
         </div>
       </div>
       <div class="cart-summary">
-        <h2>Total: ${{ cartStore.totalPrice }}</h2>
+        <h2>Total: {{ cartStore.totalPrice }}€</h2>
         <button class="checkout-btn">Proceed to Checkout</button>
       </div>
     </div>
