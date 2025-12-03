@@ -33,6 +33,18 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/orders',
+    name: 'Orders',
+    component: () => import('@/views/OrdersView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/order/:orderId',
+    name: 'OrderConfirmation',
+    component: () => import('@/views/OrderConfirmationView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/auth',
     name: 'Auth',
     component: () => import('@/views/AuthView.vue'),

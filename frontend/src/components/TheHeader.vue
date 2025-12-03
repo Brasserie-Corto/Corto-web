@@ -31,12 +31,13 @@ const handleLogout = async () => {
       </nav>
       <div class="actions">
         <div v-if="authStore.isLoggedIn" class="auth-actions">
+          <router-link to="/orders" class="orders-link">Mes commandes</router-link>
           <span class="welcome-message">Bienvenue, {{ authStore.user?.name }} !</span>
           <button @click="handleLogout" class="logout-btn">Déconnexion</button>
         </div>
         <router-link v-else to="/auth" class="login-link">Connexion</router-link>
 
-        <router-link to="/cart" class="cart-link" aria-label="View shopping cart">
+        <router-link to="/cart" class="cart-link" aria-label="Voir le panier">
           <div class="cart">
             <span class="cart-icon" role="img" aria-hidden="true">🍺</span>
             <span class="cart-count" v-if="cartStore.totalItems > 0">{{ cartStore.totalItems }}</span>
@@ -115,6 +116,22 @@ const handleLogout = async () => {
   font-size: 1.1rem;
   font-weight: 500;
   color: var(--text-color);
+}
+
+.orders-link {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--primary-color);
+  text-decoration: none;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--primary-color);
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.orders-link:hover {
+  background: var(--primary-color);
+  color: white;
 }
 
 .cart-link {

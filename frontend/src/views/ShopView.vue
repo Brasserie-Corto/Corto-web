@@ -2,21 +2,20 @@
 import { ref, computed, onMounted } from 'vue';
 import BeerCard from '@/components/BeerCard.vue';
 import BeerFilters from '@/components/BeerFilters.vue';
+import { API_URL } from '@/config/api';
 import type { Beer } from '@/types';
 
-const beers = ref<Beer[]>([]); 
+const beers = ref<Beer[]>([]);
 
 onMounted(async () => {
   try {
-    const response = await fetch('http://localhost:8080/beers');
+    const response = await fetch(`${API_URL}/beers`);
     if (!response.ok) throw new Error('Failed to fetch beers');
     beers.value = await response.json();
   } catch (error) {
     console.error('Erreur:', error);
   }
 });
-
-console.log(beers);
 const filters = ref({
   price: 20,
   types: [],

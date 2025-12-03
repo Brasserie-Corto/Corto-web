@@ -1,72 +1,281 @@
 import { defineStore } from 'pinia';
-import { ref, computed, watch } from 'vue';
-import type { Beer } from '@/types';
-
-interface CartItem {
-  beer: Beer;
-  quantity: number;
-}
-
-const STORAGE_KEY = 'corto-cart-items';
+import { ref, computed } from 'vue';
+import { useAuthStore } from './auth';
+import { API_URL } from '@/config/api';
+import type { CartItem, Beer } from '@/types';
 
 export const useCartStore = defineStore('cart', () => {
-  // Load initial state from localStorage
-  const getInitialItems = (): CartItem[] => {
-    const storedItems = localStorage.getItem(STORAGE_KEY);
-    if (storedItems) {
-      try {
-        return JSON.parse(storedItems);
-      } catch (e) {
-        console.error('Failed to parse cart items from localStorage', e);
-        // Clear corrupted data
-        localStorage.removeItem(STORAGE_KEY);
-      }
-    }
-    return [];
-  };
+  const items = ref<CartItem[]>([]);
+  const loading = ref(false);
+  const error = ref<string | null>(null);
+  const expiresAt = ref<Date | null>(null);
 
-  const items = ref<CartItem[]>(getInitialItems());
-
-  // Watch for changes in items and save to localStorage
-  watch(
-    items,
-    (newItems) => {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newItems));
-    },
-    { deep: true } // Use deep watch to detect changes in item quantity
-  );
+  const authStore = useAuthStore();
 
   const totalItems = computed(() => {
     return items.value.reduce((total, item) => total + item.quantity, 0);
   });
-  
+
   const totalPrice = computed(() => {
-    return items.value.reduce((total, item) => total + item.beer.price * item.quantity, 0).toFixed(2);
+    return items.value
+      .reduce((total, item) => total + item.price * item.quantity, 0)
+      .toFixed(2);
   });
 
-  function addItem(beer: Beer) {
-    const existingItem = items.value.find(item => item.beer.id === beer.id);
-    if (existingItem) {
-      existingItem.quantity++;
-    } else {
-      items.value.push({ beer, quantity: 1 });
+  const timeRemaining = computed(() => {
+    if (!expiresAt.value) return null;
+    const now = new Date();
+    const diff = expiresAt.value.getTime() - now.getTime();
+    if (diff <= 0) return null;
+    const minutes = Math.floor(diff / 60000);
+    const seconds = Math.floor((diff % 60000) / 1000);
+    return { minutes, seconds, total: diff };
+  });
+
+  // Fetch cart from backend
+  async function fetchCart() {
+    const clientId = authStore.user?.clientId;
+    if (!clientId) return;
+
+    try {
+      loading.value = true;
+      const response = await fetch(`${API_URL}/cart/${clientId}`);
+      if (!response.ok) throw new Error('Failed to fetch cart');
+      
+      const data = await response.json();
+      items.value = data;
+      
+      // Set expiration from first item (all should have same expiration)
+      if (data.length > 0) {
+        expiresAt.value = new Date(data[0].expires_at);
+      } else {
+        expiresAt.value = null;
+      }
+    } catch (err: any) {
+      error.value = err.message;
+      console.error('Error fetching cart:', err);
+    } finally {
+      loading.value = false;
     }
   }
 
-  function decreaseQuantity(beerId: number) {
-    const existingItem = items.value.find(item => item.beer.id === beerId);
-    if (existingItem) {
-      if (existingItem.quantity > 1) {
-        existingItem.quantity--;
+  // Add item to cart (creates reservation)
+  async function addItem(beer: Beer) {
+    const clientId = authStore.user?.clientId;
+    if (!clientId) {
+      error.value = 'Vous devez être connecté';
+      return false;
+    }
+
+    try {
+      loading.value = true;
+      error.value = null;
+
+      const response = await fetch(`${API_URL}/cart/reserve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId,
+          recipeId: beer.id,
+          quantity: 1,
+        }),
+      });
+
+      // Handle non-JSON responses (e.g., server errors)
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        error.value = 'Erreur serveur - veuillez réessayer';
+        return false;
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        error.value = data.error || 'Erreur lors de l\'ajout';
+        return false;
+      }
+
+      expiresAt.value = new Date(data.expiresAt);
+      await fetchCart();
+      return true;
+    } catch (err: any) {
+      error.value = err.message;
+      console.error('Error adding to cart:', err);
+      return false;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  // Update item quantity
+  async function updateQuantity(reservationId: number, quantity: number) {
+    try {
+      loading.value = true;
+      error.value = null;
+
+      const response = await fetch(`${API_URL}/cart/reservation/${reservationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        error.value = data.error || 'Erreur lors de la mise à jour';
+        return false;
+      }
+
+      await fetchCart();
+      return true;
+    } catch (err: any) {
+      error.value = err.message;
+      console.error('Error updating quantity:', err);
+      return false;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  // Increase quantity
+  async function increaseQuantity(reservationId: number) {
+    const item = items.value.find(i => i.id === reservationId);
+    if (item) {
+      return updateQuantity(reservationId, item.quantity + 1);
+    }
+  }
+
+  // Decrease quantity
+  async function decreaseQuantity(reservationId: number) {
+    const item = items.value.find(i => i.id === reservationId);
+    if (item) {
+      if (item.quantity > 1) {
+        return updateQuantity(reservationId, item.quantity - 1);
       } else {
-        removeItem(beerId);
+        return removeItem(reservationId);
       }
     }
   }
 
-  function removeItem(beerId: number) {
-    items.value = items.value.filter(item => item.beer.id !== beerId);
+  // Remove item from cart
+  async function removeItem(reservationId: number) {
+    try {
+      loading.value = true;
+      error.value = null;
+
+      const response = await fetch(`${API_URL}/cart/reservation/${reservationId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        error.value = data.error || 'Erreur lors de la suppression';
+        return false;
+      }
+
+      await fetchCart();
+      return true;
+    } catch (err: any) {
+      error.value = err.message;
+      console.error('Error removing item:', err);
+      return false;
+    } finally {
+      loading.value = false;
+    }
   }
 
-  return { items, totalItems, totalPrice, addItem, decreaseQuantity, removeItem };
+  // Clear cart
+  async function clearCart() {
+    const clientId = authStore.user?.clientId;
+    if (!clientId) return;
+
+    try {
+      loading.value = true;
+      await fetch(`${API_URL}/cart/${clientId}`, { method: 'DELETE' });
+      items.value = [];
+      expiresAt.value = null;
+    } catch (err: any) {
+      error.value = err.message;
+      console.error('Error clearing cart:', err);
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  // Extend reservation time
+  async function extendTime() {
+    const clientId = authStore.user?.clientId;
+    if (!clientId) return;
+
+    try {
+      const response = await fetch(`${API_URL}/cart/extend/${clientId}`, {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        expiresAt.value = new Date(data.expiresAt);
+      }
+    } catch (err: any) {
+      console.error('Error extending time:', err);
+    }
+  }
+
+  // Checkout - create order
+  async function checkout() {
+    const clientId = authStore.user?.clientId;
+    if (!clientId) {
+      error.value = 'Vous devez être connecté';
+      return null;
+    }
+
+    try {
+      loading.value = true;
+      error.value = null;
+
+      const response = await fetch(`${API_URL}/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        error.value = data.error || 'Erreur lors de la commande';
+        return null;
+      }
+
+      // Clear local cart
+      items.value = [];
+      expiresAt.value = null;
+
+      return data.order;
+    } catch (err: any) {
+      error.value = err.message;
+      console.error('Error during checkout:', err);
+      return null;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  return {
+    items,
+    loading,
+    error,
+    expiresAt,
+    totalItems,
+    totalPrice,
+    timeRemaining,
+    fetchCart,
+    addItem,
+    increaseQuantity,
+    decreaseQuantity,
+    updateQuantity,
+    removeItem,
+    clearCart,
+    extendTime,
+    checkout,
+  };
 });

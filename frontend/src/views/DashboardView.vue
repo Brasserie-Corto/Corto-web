@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
+import { API_URL } from '@/config/api';
+
+// WebSocket URL (convert http to ws)
+const WS_URL = API_URL.replace(/^http/, 'ws');
 
 interface DashboardStats {
   recipes_count: number;
@@ -18,7 +22,7 @@ let socket: WebSocket | null = null;
 
 const fetchStats = async () => {
   try {
-    const response = await fetch('http://localhost:8080/dashboard-stats');
+    const response = await fetch(`${API_URL}/dashboard-stats`);
     if (response.ok) {
       stats.value = await response.json();
     }
@@ -28,7 +32,7 @@ const fetchStats = async () => {
 };
 
 const connectWebSocket = () => {
-  socket = new WebSocket('ws://localhost:8080');
+  socket = new WebSocket(WS_URL);
 
   socket.onopen = () => {
     console.log('WebSocket connected');

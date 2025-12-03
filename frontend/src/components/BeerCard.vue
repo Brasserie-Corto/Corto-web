@@ -1,13 +1,38 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import type { Beer } from '@/types';
 import { useCartStore } from '@/store/cart';
 
 interface Props {
   beer: Beer;
 }
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const cartStore = useCartStore();
+const adding = ref(false);
+const added = ref(false);
+const errorMsg = ref<string | null>(null);
+
+const handleAddToCart = async () => {
+  adding.value = true;
+  errorMsg.value = null;
+  
+  const success = await cartStore.addItem(props.beer);
+  
+  if (success) {
+    added.value = true;
+    setTimeout(() => {
+      added.value = false;
+    }, 2000);
+  } else {
+    errorMsg.value = cartStore.error || 'Erreur';
+    setTimeout(() => {
+      errorMsg.value = null;
+    }, 3000);
+  }
+  
+  adding.value = false;
+};
 </script>
 
 <template>
@@ -24,8 +49,15 @@ const cartStore = useCartStore();
         <span>{{ beer.color }}</span>
       </div>
       <p class="beer-price">{{ beer.price.toFixed(2) }}€</p>
-      <button @click="cartStore.addItem(beer)" :disabled="!beer.inStock">
-        Ajouter au panier
+      <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
+      <button 
+        @click="handleAddToCart" 
+        :disabled="!beer.inStock || adding"
+        :class="{ 'added': added }"
+      >
+        <template v-if="adding">Ajout...</template>
+        <template v-else-if="added">✓ Ajouté !</template>
+        <template v-else>Ajouter au panier</template>
       </button>
     </div>
   </div>
@@ -90,8 +122,23 @@ const cartStore = useCartStore();
   margin-bottom: 1rem;
 }
 
+.error-msg {
+  color: #dc3545;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
 .beer-info button {
   width: 100%;
   margin-top: auto;
+  transition: all 0.2s;
+}
+
+.beer-info button.added {
+  background-color: #28a745;
+}
+
+.beer-info button:disabled {
+  opacity: 0.7;
 }
 </style>

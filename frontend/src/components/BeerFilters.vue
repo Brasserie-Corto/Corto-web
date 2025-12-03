@@ -1,8 +1,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-
-const API_URL = 'http://localhost:8080';
+import { API_URL } from '@/config/api';
 
 const beerColors = ref<string[]>([]);
 const maxPrice = ref(20);

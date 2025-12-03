@@ -1,30 +1,101 @@
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { useCartStore } from '@/store/cart';
 
 const cartStore = useCartStore();
+const router = useRouter();
+const now = ref(new Date());
+let timerInterval: number | null = null;
+
+// Update "now" every second for countdown
+onMounted(() => {
+  cartStore.fetchCart();
+  timerInterval = window.setInterval(() => {
+    now.value = new Date();
+  }, 1000);
+});
+
+onUnmounted(() => {
+  if (timerInterval) clearInterval(timerInterval);
+});
+
+// Computed countdown
+const countdown = computed(() => {
+  if (!cartStore.expiresAt) return null;
+  const diff = cartStore.expiresAt.getTime() - now.value.getTime();
+  if (diff <= 0) return { expired: true, minutes: 0, seconds: 0 };
+  const minutes = Math.floor(diff / 60000);
+  const seconds = Math.floor((diff % 60000) / 1000);
+  return { expired: false, minutes, seconds };
+});
+
+const isExpiringSoon = computed(() => {
+  return countdown.value && !countdown.value.expired && countdown.value.minutes < 5;
+});
+
+const handleCheckout = async () => {
+  const order = await cartStore.checkout();
+  if (order) {
+    router.push({ name: 'OrderConfirmation', params: { orderId: order.id } });
+  }
+};
+
+const handleExtendTime = () => {
+  cartStore.extendTime();
+};
 </script>
 
 <template>
   <div class="cart-page">
     <h1>Votre panier</h1>
-    <div v-if="cartStore.items.length > 0" class="cart-content card">
+    
+    <!-- Timer Banner -->
+    <div v-if="cartStore.items.length > 0 && countdown" class="timer-banner" :class="{ warning: isExpiringSoon, expired: countdown.expired }">
+      <template v-if="countdown.expired">
+        <span class="timer-icon">⏰</span>
+        <span>Votre panier a expiré ! Les articles ont été libérés.</span>
+        <button @click="cartStore.fetchCart()" class="refresh-btn">Actualiser</button>
+      </template>
+      <template v-else>
+        <span class="timer-icon">⏱️</span>
+        <span>
+          Vos articles sont réservés pendant 
+          <strong>{{ countdown.minutes }}:{{ countdown.seconds.toString().padStart(2, '0') }}</strong>
+        </span>
+        <button v-if="isExpiringSoon" @click="handleExtendTime" class="extend-btn">
+          Prolonger (+15 min)
+        </button>
+      </template>
+    </div>
+
+    <!-- Error message -->
+    <div v-if="cartStore.error" class="error-banner">
+      {{ cartStore.error }}
+    </div>
+
+    <div v-if="cartStore.loading" class="loading">
+      Chargement...
+    </div>
+
+    <div v-else-if="cartStore.items.length > 0 && !countdown?.expired" class="cart-content card">
       <div class="cart-items">
-        <div v-for="item in cartStore.items" :key="item.beer.id" class="cart-item">
-          <img :src="item.beer.imageUrl" :alt="item.beer.name" class="item-image" />
+        <div v-for="item in cartStore.items" :key="item.id" class="cart-item">
+          <img :src="item.imageUrl" :alt="item.name" class="item-image" />
           <div class="item-details">
-            <h3>{{ item.beer.name }}</h3>
-            <p class="item-price">{{ item.beer.price.toFixed(2) }}€</p>
+            <h3>{{ item.name }}</h3>
+            <p class="item-price">{{ item.price.toFixed(2) }}€</p>
           </div>
           <div class="item-quantity">
-            <button @click="cartStore.decreaseQuantity(item.beer.id)" class="quantity-btn">-</button>
+            <button @click="cartStore.decreaseQuantity(item.id)" class="quantity-btn" :disabled="cartStore.loading">-</button>
             <span>{{ item.quantity }}</span>
-            <button @click="cartStore.addItem(item.beer)" class="quantity-btn">+</button>
+            <button @click="cartStore.increaseQuantity(item.id)" class="quantity-btn" :disabled="cartStore.loading">+</button>
           </div>
           <div class="item-subtotal">
-            <p>{{ (item.beer.price * item.quantity).toFixed(2) }}€</p>
+            <p>{{ (item.price * item.quantity).toFixed(2) }}€</p>
           </div>
           <div class="item-remove">
-            <button @click="cartStore.removeItem(item.beer.id)" class="remove-btn" aria-label="Remove item">
+            <button @click="cartStore.removeItem(item.id)" class="remove-btn" aria-label="Supprimer" :disabled="cartStore.loading">
               &times;
             </button>
           </div>
@@ -32,9 +103,12 @@ const cartStore = useCartStore();
       </div>
       <div class="cart-summary">
         <h2>Total : {{ cartStore.totalPrice }}€</h2>
-        <button class="checkout-btn">Passer commande</button>
+        <button @click="handleCheckout" class="checkout-btn" :disabled="cartStore.loading">
+          {{ cartStore.loading ? 'Traitement...' : 'Passer commande' }}
+        </button>
       </div>
     </div>
+
     <div v-else class="empty-cart card">
       <h2>Votre panier est vide.</h2>
       <p>On dirait que vous n'avez pas encore ajouté de bières. Allez, on y va !</p>
@@ -49,6 +123,64 @@ const cartStore = useCartStore();
 .cart-page h1 {
   text-align: center;
   margin-bottom: 2rem;
+}
+
+.timer-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: 8px;
+  background: #e8f5e9;
+  color: #2e7d32;
+  font-weight: 500;
+}
+
+.timer-banner.warning {
+  background: #fff3e0;
+  color: #e65100;
+  animation: pulse 2s infinite;
+}
+
+.timer-banner.expired {
+  background: #ffebee;
+  color: #c62828;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.timer-icon {
+  font-size: 1.5rem;
+}
+
+.extend-btn, .refresh-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  background: var(--secondary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.error-banner {
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: 8px;
+  background: #ffebee;
+  color: #c62828;
+  text-align: center;
+}
+
+.loading {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
 }
 
 .cart-content {
@@ -107,6 +239,11 @@ const cartStore = useCartStore();
   justify-content: center;
 }
 
+.quantity-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .item-subtotal {
   font-weight: bold;
   font-size: 1.1rem;
@@ -122,6 +259,11 @@ const cartStore = useCartStore();
   line-height: 1;
   cursor: pointer;
   padding: 0;
+}
+
+.remove-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .cart-summary {
@@ -140,6 +282,11 @@ const cartStore = useCartStore();
   max-width: 300px;
 }
 
+.checkout-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .empty-cart {
   text-align: center;
   padding: 3rem;
@@ -155,6 +302,11 @@ const cartStore = useCartStore();
 }
 
 @media (max-width: 768px) {
+  .timer-banner {
+    flex-direction: column;
+    text-align: center;
+  }
+
   .cart-item {
     grid-template-columns: 80px 1fr auto;
     grid-template-rows: auto auto;

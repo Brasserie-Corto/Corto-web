@@ -54,6 +54,7 @@ export const useAuthStore = defineStore('auth', () => {
 
       user.value = {
         id: data.user_id,
+        clientId: data.id, // Store the client table ID for API calls
         name: data.name,
         email: data.mail,
         is_active: data.is_active,
