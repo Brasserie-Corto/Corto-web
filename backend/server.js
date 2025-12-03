@@ -70,6 +70,27 @@ app.get("/beers", async (req, res) => {
   }
 });
 
+app.get("/beer-colors", async (req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT DISTINCT color FROM detailed_recipes WHERE color IS NOT NULL");
+    const colors = rows.map((row) => row.color);
+    res.json(colors);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.get("/max-price", async (req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT MAX(price) as max_price FROM detailed_recipes");
+    res.json({ maxPrice: rows[0].max_price || 20 });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 // Endpoint to simulate adding a recipe or updating data
 app.post("/beers", async (req, res) => {
   // For now, we just simulate an update and broadcast the new stats

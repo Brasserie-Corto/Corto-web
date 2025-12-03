@@ -26,7 +26,7 @@ const handleLogout = async () => {
         <router-link to="/about">About</router-link>
         <router-link to="/live">Live Stream</router-link>
         <router-link to="/contact">Contact</router-link>
-        <router-link to="/dashboard">Dashboard</router-link>
+        <!-- <router-link to="/dashboard">Dashboard</router-link> -->
         <router-link v-if="isAdmin" to="/admin">Admin</router-link>
       </nav>
       <div class="actions">

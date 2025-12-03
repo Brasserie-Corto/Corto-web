@@ -16,8 +16,8 @@ const routes = [
   },
   {
     path: '/live',
-    name: 'LiveStream',
-    component: () => import('@/views/LiveStreamView.vue'),
+    name: 'Dashboard',
+    component: () => import('@/views/DashboardView.vue'),
     meta: { requiresAuth: true },
   },
   {

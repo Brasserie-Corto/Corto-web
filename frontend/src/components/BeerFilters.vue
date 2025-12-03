@@ -1,12 +1,29 @@
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { getBeerColors, maxPrice } from '@/data/beers';
+import { ref, onMounted } from 'vue';
+
+const API_URL = 'http://localhost:8080';
 
 const beerColors = ref<string[]>([]);
+const maxPrice = ref(20);
+
 onMounted(async () => {
-  // load colors available currently
-  beerColors.value = await getBeerColors();
+  try {
+    const [colorsRes, priceRes] = await Promise.all([
+      fetch(`${API_URL}/beer-colors`),
+      fetch(`${API_URL}/max-price`)
+    ]);
+    
+    if (colorsRes.ok) {
+      beerColors.value = await colorsRes.json();
+    }
+    if (priceRes.ok) {
+      const data = await priceRes.json();
+      maxPrice.value = data.maxPrice;
+    }
+  } catch (error) {
+    console.error('Error loading filter data:', error);
+  }
 });
 
 const filters = defineModel('filters');
