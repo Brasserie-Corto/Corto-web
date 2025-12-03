@@ -1,14 +1,22 @@
 export type BeerType = 'IPA' | 'Stout' | 'Lager' | 'Pale Ale' | 'Pilsner' | 'Sour';
 export type BeerColor = 'blonde' | 'ambrée' | 'brune' | 'noire' | 'blanche';
 
+export interface Contenant {
+  id: number;
+  volume: number; // en cl
+  stock: number;
+  price: number; // prix pour ce contenant
+}
+
 export interface Beer {
   id: number;
   name: string;
-  type: BeerType;
+  type?: BeerType;
   color: BeerColor;
-  price: number;
+  basePrice: number; // prix de base (pour 1L ou référence)
+  pricePerLiter: number;
   imageUrl: string;
-  total_quantity: number;
+  contenants: Contenant[];
   inStock: boolean;
 }
 
@@ -24,6 +32,8 @@ export interface User {
 export interface CartItem {
   id: number; // reservation id
   id_recipe: number;
+  id_contening: number;
+  volume: number; // volume du contenant en cl
   name: string;
   price: number;
   imageUrl: string;

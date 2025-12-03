@@ -88,12 +88,52 @@ app.get("/dashboard-stats", async (req, res) => {
 app.get("/beers", async (req, res) => {
   try {
     const { rows } = await pool.query("SELECT * FROM available_stock");
-    const beers = rows.map((beer) => ({
+    
+    // Grouper par recette avec tous les contenants disponibles
+    const beersMap = new Map();
+    
+    for (const row of rows) {
+      const beerId = row.id;
+      
+      if (!beersMap.has(beerId)) {
+        beersMap.set(beerId, {
+          id: parseInt(beerId),
+          name: row.name,
+          color: row.color,
+          basePrice: parseFloat(row.base_price),
+          pricePerLiter: parseFloat(row.base_price), // Le prix en base est pour 1L
+          imageUrl: `${process.env.SUPABASE_URL}/storage/v1/object/public/${row.image?.replace('beer/', 'beers/') || row.image}`,
+          contenants: [],
+          inStock: false,
+        });
+      }
+      
+      const beer = beersMap.get(beerId);
+      const volume = parseInt(row.volume); // volume en ml
+      const stock = parseInt(row.available_quantity) || 0;
+      
+      // Calculer le prix pour ce contenant (prix au litre * volume en litres)
+      // volume est en ml, donc on divise par 1000 pour avoir des litres
+      const priceForContenant = parseFloat((beer.basePrice * (volume / 1000)).toFixed(2));
+      
+      beer.contenants.push({
+        id: parseInt(row.id_contening),
+        volume: volume,
+        stock: stock,
+        price: priceForContenant,
+      });
+      
+      if (stock > 0) {
+        beer.inStock = true;
+      }
+    }
+    
+    // Trier les contenants par volume
+    const beers = Array.from(beersMap.values()).map(beer => ({
       ...beer,
-      imageUrl: `${process.env.SUPABASE_URL}/storage/v1/object/public/${beer.image?.replace('beer/', 'beers/') || beer.image}`,
-      total_quantity: beer.available_quantity || 0,
-      inStock: (beer.available_quantity || 0) > 0,
+      contenants: beer.contenants.sort((a, b) => a.volume - b.volume),
     }));
+    
     res.json(beers);
   } catch (err) {
     console.error(err);
@@ -114,7 +154,7 @@ app.get("/beer-colors", async (req, res) => {
 
 app.get("/max-price", async (req, res) => {
   try {
-    const { rows } = await pool.query("SELECT MAX(price) as max_price FROM detailed_recipes");
+    const { rows } = await pool.query("SELECT MAX(base_price) as max_price FROM detailed_recipes");
     res.json({ maxPrice: rows[0].max_price || 20 });
   } catch (err) {
     console.error(err);
@@ -152,21 +192,32 @@ app.get("/cart/:clientId", async (req, res) => {
     const { clientId } = req.params;
     
     const { rows } = await pool.query(
-      `SELECT r.id, r.id_recipe, r.quantity, r.expires_at, r.created_at,
-              rec.name, rec.price, rec.image, rec.color
+      `SELECT r.id, r.id_recipe, r.id_contening, r.quantity, r.expires_at, r.created_at,
+              rec.name, rec.price as base_price, rec.image, rec.color,
+              c.volume
        FROM reservation r
        JOIN recipe rec ON r.id_recipe = rec.id
+       JOIN contening c ON c.id = r.id_contening
        WHERE r.id_client = $1 AND r.expires_at > NOW()
        ORDER BY r.created_at DESC`,
       [clientId]
     );
     
-    const cart = rows.map(item => ({
-      ...item,
-      quantity: parseInt(item.quantity),
-      price: parseFloat(item.price),
-      imageUrl: `${process.env.SUPABASE_URL}/storage/v1/object/public/${item.image?.replace('beer/', 'beers/') || item.image}`,
-    }));
+    const cart = rows.map(item => {
+      const volume = parseInt(item.volume); // volume en ml
+      const basePrice = parseFloat(item.base_price);
+      // volume en ml, donc diviser par 1000 pour avoir des litres
+      const price = parseFloat((basePrice * (volume / 1000)).toFixed(2));
+      
+      return {
+        ...item,
+        id_contening: parseInt(item.id_contening),
+        volume: volume,
+        quantity: parseInt(item.quantity),
+        price: price,
+        imageUrl: `${process.env.SUPABASE_URL}/storage/v1/object/public/${item.image?.replace('beer/', 'beers/') || item.image}`,
+      };
+    });
     
     res.json(cart);
   } catch (err) {

@@ -24,10 +24,9 @@ const filters = ref({
 });
 
 const filteredBeers = computed(() => {
-  // 4. IMPORTANT : Utiliser beers.value ici car c'est une Ref maintenant
   return beers.value.filter((beer: Beer) => {
-    // Price filter
-    const priceMatch = beer.price <= filters.value.price;
+    // Price filter (basé sur le prix au litre)
+    const priceMatch = beer.pricePerLiter <= filters.value.price;
 
     // Type filter
     // @ts-ignore

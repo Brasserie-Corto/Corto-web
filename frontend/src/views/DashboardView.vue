@@ -96,7 +96,7 @@ onUnmounted(() => {
       <div class="stat-card orders">
         <div class="icon">📦</div>
         <div class="stat-value">{{ stats.orders_count }}</div>
-        <div class="stat-label">Commandes Terminées</div>
+        <div class="stat-label">Commandes passées</div>
       </div>
     </div>
   </div>

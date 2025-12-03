@@ -84,7 +84,8 @@ const handleExtendTime = () => {
           <img :src="item.imageUrl" :alt="item.name" class="item-image" />
           <div class="item-details">
             <h3>{{ item.name }}</h3>
-            <p class="item-price">{{ item.price.toFixed(2) }}€</p>
+            <p class="item-volume">{{ item.volume >= 1000 ? `${item.volume / 1000}L` : `${item.volume / 10}cl` }}</p>
+            <p class="item-price">{{ item.price.toFixed(2) }}€ / unité</p>
           </div>
           <div class="item-quantity">
             <button @click="cartStore.decreaseQuantity(item.id)" class="quantity-btn" :disabled="cartStore.loading">-</button>
@@ -212,8 +213,16 @@ const handleExtendTime = () => {
   font-size: 1.1rem;
 }
 
+.item-volume {
+  font-size: 0.9rem;
+  color: var(--secondary-color);
+  font-weight: 600;
+  margin: 0.25rem 0;
+}
+
 .item-price {
   color: #6c757d;
+  font-size: 0.9rem;
 }
 
 .item-quantity {
