@@ -13,7 +13,7 @@ const cartStore = useCartStore();
 <template>
   <div class="beer-card card">
     <div class="stock-badge" :class="{ 'out-of-stock': !beer.inStock }">
-      {{ beer.inStock ? 'In Stock' : 'Out of Stock' }}
+      {{ beer.inStock ? 'En stock' : 'Rupture' }}
     </div>
     <img :src="beer.imageUrl" :alt="beer.name" class="beer-image" />
     <div class="beer-info">
@@ -25,7 +25,7 @@ const cartStore = useCartStore();
       </div>
       <p class="beer-price">{{ beer.price.toFixed(2) }}€</p>
       <button @click="cartStore.addItem(beer)" :disabled="!beer.inStock">
-        Add to Cart
+        Ajouter au panier
       </button>
     </div>
   </div>

@@ -1,7 +1,7 @@
 <template>
   <div class="about-page">
     <section class="card">
-      <h1>About Corto Brewery</h1>
+      <h1>À propos de la Brasserie Corto</h1>
       <p>
         Deux potes, une apétence certaine pour la bière, et une cave dans une maison du cantal. L'aventure Corto commence en 2024 avec l'envie de brasser nos propres bières artisanales, sans prétention, pour le plaisir de partager avec nos amis et notre famille.
       </p>

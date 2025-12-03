@@ -48,7 +48,7 @@ const clearForm = () => {
 
 const handleLogin = async () => {
   if (!loginEmail.value || !loginPassword.value) {
-    error.value = 'Please fill in all fields.';
+    error.value = 'Veuillez remplir tous les champs.';
     return;
   }
 
@@ -60,15 +60,15 @@ const handleLogin = async () => {
     await authStore.login(loginEmail.value, loginPassword.value);
     
     if (authStore.isActive) {
-      successMessage.value = 'Login successful! Redirecting...';
+      successMessage.value = 'Connexion réussie ! Redirection...';
       setTimeout(() => {
         router.push('/');
       }, 1000);
     } else {
-      error.value = 'Your account is pending admin approval. You will be notified when activated.';
+      error.value = 'Votre compte est en attente de validation par un administrateur.';
     }
   } catch (err: any) {
-    error.value = err.message || 'Login failed. Please check your credentials.';
+    error.value = err.message || 'Échec de la connexion. Vérifiez vos identifiants.';
   } finally {
     isLoading.value = false;
   }
@@ -84,17 +84,17 @@ const handleSignup = async () => {
     !signupConfirmPassword.value ||
     !signupPhone.value
   ) {
-    error.value = 'Please fill in all required fields.';
+    error.value = 'Veuillez remplir tous les champs obligatoires.';
     return;
   }
 
   if (signupPassword.value !== signupConfirmPassword.value) {
-    error.value = 'Passwords do not match.';
+    error.value = 'Les mots de passe ne correspondent pas.';
     return;
   }
 
   if (signupPassword.value.length < 6) {
-    error.value = 'Password must be at least 6 characters.';
+    error.value = 'Le mot de passe doit contenir au moins 6 caractères.';
     return;
   }
 
@@ -113,7 +113,7 @@ const handleSignup = async () => {
     );
 
     successMessage.value =
-      'Account created successfully! Please wait for admin approval before accessing the site.';
+      'Compte créé avec succès ! Veuillez attendre la validation par un administrateur.';
     clearForm();
     isLoginView.value = true; // Switch back to login view
 
@@ -121,7 +121,7 @@ const handleSignup = async () => {
       successMessage.value = null;
     }, 5000);
   } catch (err: any) {
-    error.value = err.message || 'Signup failed. Please try again.';
+    error.value = err.message || 'Échec de l\'inscription. Veuillez réessayer.';
   } finally {
     isLoading.value = false;
   }
@@ -138,13 +138,13 @@ const handleLogout = async () => {
   <div class="auth-page">
     <!-- Pending Activation Message -->
     <div v-if="isPendingActivation" class="pending-activation-card">
-      <div class="pending-badge">⏳ Pending Activation</div>
-      <h2>Your account is pending admin approval</h2>
+      <div class="pending-badge">⏳ En attente d'activation</div>
+      <h2>Votre compte est en attente de validation</h2>
       <p>
-        Thank you for signing up! An administrator will review your account shortly.
-        You will receive a notification once your account is activated.
+        Merci pour votre inscription ! Un administrateur va examiner votre compte très bientôt.
+        Vous serez notifié dès que votre compte sera activé.
       </p>
-      <button @click="handleLogout" class="btn-logout">Logout</button>
+      <button @click="handleLogout" class="btn-logout">Déconnexion</button>
     </div>
 
     <!-- Login/Signup Forms -->
@@ -156,7 +156,7 @@ const handleLogout = async () => {
 
       <!-- Login Form -->
       <div v-if="isLoginView">
-        <h1>Login</h1>
+        <h1>Connexion</h1>
         <form @submit.prevent="handleLogin">
           <div class="form-group">
             <label for="login-email">Email</label>
@@ -164,12 +164,12 @@ const handleLogout = async () => {
               type="email"
               id="login-email"
               v-model="loginEmail"
-              placeholder="your@email.com"
+              placeholder="votre@email.com"
               required
             />
           </div>
           <div class="form-group">
-            <label for="login-password">Password</label>
+            <label for="login-password">Mot de passe</label>
             <input
               type="password"
               id="login-password"
@@ -180,38 +180,38 @@ const handleLogout = async () => {
           </div>
           <p v-if="error" class="error-message">{{ error }}</p>
           <button type="submit" :disabled="isLoading" class="btn-primary">
-            {{ isLoading ? 'Logging in...' : 'Login' }}
+            {{ isLoading ? 'Connexion...' : 'Se connecter' }}
           </button>
         </form>
         <p class="toggle-text">
-          Don't have an account?
-          <a href="#" @click.prevent="toggleView">Sign Up</a>
+          Pas encore de compte ?
+          <a href="#" @click.prevent="toggleView">S'inscrire</a>
         </p>
       </div>
 
       <!-- Signup Form -->
       <div v-else>
-        <h1>Create Account</h1>
-        <p class="form-note">* Required fields</p>
+        <h1>Créer un compte</h1>
+        <p class="form-note">* Champs obligatoires</p>
         <form @submit.prevent="handleSignup">
           <div class="form-row">
             <div class="form-group">
-              <label for="signup-name">First Name *</label>
+              <label for="signup-name">Prénom *</label>
               <input
                 type="text"
                 id="signup-name"
                 v-model="signupName"
-                placeholder="John"
+                placeholder="Jean"
                 required
               />
             </div>
             <div class="form-group">
-              <label for="signup-lastname">Last Name *</label>
+              <label for="signup-lastname">Nom *</label>
               <input
                 type="text"
                 id="signup-lastname"
                 v-model="signupLastname"
-                placeholder="Doe"
+                placeholder="Dupont"
                 required
               />
             </div>
@@ -223,13 +223,13 @@ const handleLogout = async () => {
               type="email"
               id="signup-email"
               v-model="signupEmail"
-              placeholder="your@email.com"
+              placeholder="votre@email.com"
               required
             />
           </div>
 
           <div class="form-group">
-            <label for="signup-phone">Phone *</label>
+            <label for="signup-phone">Téléphone *</label>
             <input
               type="tel"
               id="signup-phone"
@@ -240,7 +240,7 @@ const handleLogout = async () => {
           </div>
 
           <div class="form-group">
-            <label for="signup-address">Address (Optional)</label>
+            <label for="signup-address">Adresse (Optionnel)</label>
             <input
               type="text"
               id="signup-address"
@@ -251,7 +251,7 @@ const handleLogout = async () => {
 
           <div class="form-row">
             <div class="form-group">
-              <label for="signup-password">Password *</label>
+              <label for="signup-password">Mot de passe *</label>
               <input
                 type="password"
                 id="signup-password"
@@ -261,7 +261,7 @@ const handleLogout = async () => {
               />
             </div>
             <div class="form-group">
-              <label for="signup-confirm-password">Confirm Password *</label>
+              <label for="signup-confirm-password">Confirmer le mot de passe *</label>
               <input
                 type="password"
                 id="signup-confirm-password"
@@ -274,12 +274,12 @@ const handleLogout = async () => {
 
           <p v-if="error" class="error-message">{{ error }}</p>
           <button type="submit" :disabled="isLoading" class="btn-primary">
-            {{ isLoading ? 'Creating account...' : 'Create Account' }}
+            {{ isLoading ? 'Création en cours...' : 'Créer mon compte' }}
           </button>
         </form>
         <p class="toggle-text">
-          Already have an account?
-          <a href="#" @click.prevent="toggleView">Login</a>
+          Déjà un compte ?
+          <a href="#" @click.prevent="toggleView">Se connecter</a>
         </p>
       </div>
     </div>

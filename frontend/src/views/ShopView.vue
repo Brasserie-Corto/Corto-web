@@ -54,8 +54,8 @@ const filteredBeers = computed(() => {
     <div class="beer-grid">
       <BeerCard v-for="beer in filteredBeers" :key="beer.id" :beer="beer" />
       <div v-if="beers.length === 0" class="no-results card">
-        <h3>No Beers Found</h3>
-        <p>Try adjusting your filters to find your perfect brew!</p>
+        <h3>Aucune bière trouvée</h3>
+        <p>Essayez d'ajuster vos filtres pour trouver votre bière idéale !</p>
       </div>
     </div>
   </div>

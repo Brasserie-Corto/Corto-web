@@ -31,9 +31,9 @@ const filters = defineModel('filters');
 
 <template>
   <aside class="filters-sidebar card">
-    <h3>Filters</h3>
+    <h3>Filtres</h3>
     <div class="filter-group">
-      <label for="price-range">Max Price: {{ filters.price }}€</label>
+      <label for="price-range">Prix max : {{ filters.price }}€</label>
       <input 
         type="range" 
         id="price-range" 
@@ -45,7 +45,7 @@ const filters = defineModel('filters');
     </div>
     
     <div class="filter-group">
-      <h4>Color</h4>
+      <h4>Couleur</h4>
       <div v-for="color in beerColors" :key="color" class="checkbox-group">
         <input type="checkbox" :id="color" :value="color" v-model="filters.colors" />
         <label :for="color">{{ color }}</label>
@@ -56,15 +56,15 @@ const filters = defineModel('filters');
       <h4>Stock</h4>
       <div class="radio-group">
         <input type="radio" id="all" value="all" v-model="filters.stock" />
-        <label for="all">All</label>
+        <label for="all">Tout</label>
       </div>
        <div class="radio-group">
         <input type="radio" id="in-stock" value="inStock" v-model="filters.stock" />
-        <label for="in-stock">In Stock</label>
+        <label for="in-stock">En stock</label>
       </div>
        <div class="radio-group">
         <input type="radio" id="out-of-stock" value="outOfStock" v-model="filters.stock" />
-        <label for="out-of-stock">Out of Stock</label>
+        <label for="out-of-stock">Rupture</label>
       </div>
     </div>
   </aside>

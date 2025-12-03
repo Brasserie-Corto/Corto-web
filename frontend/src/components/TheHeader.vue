@@ -22,19 +22,19 @@ const handleLogout = async () => {
     <div class="header-content">
       <router-link to="/" class="brand">Corto</router-link>
       <nav class="nav">
-        <router-link to="/">Shop</router-link>
-        <router-link to="/about">About</router-link>
-        <router-link to="/live">Live Stream</router-link>
+        <router-link to="/">Boutique</router-link>
+        <router-link to="/about">À propos</router-link>
+        <router-link to="/live">La Brasserie</router-link>
         <router-link to="/contact">Contact</router-link>
         <!-- <router-link to="/dashboard">Dashboard</router-link> -->
         <router-link v-if="isAdmin" to="/admin">Admin</router-link>
       </nav>
       <div class="actions">
         <div v-if="authStore.isLoggedIn" class="auth-actions">
-          <span class="welcome-message">Welcome, {{ authStore.user?.name }}!</span>
-          <button @click="handleLogout" class="logout-btn">Logout</button>
+          <span class="welcome-message">Bienvenue, {{ authStore.user?.name }} !</span>
+          <button @click="handleLogout" class="logout-btn">Déconnexion</button>
         </div>
-        <router-link v-else to="/auth" class="login-link">Login</router-link>
+        <router-link v-else to="/auth" class="login-link">Connexion</router-link>
 
         <router-link to="/cart" class="cart-link" aria-label="View shopping cart">
           <div class="cart">

@@ -7,38 +7,38 @@ const message = ref('');
 
 const handleSubmit = () => {
   if (!name.value || !email.value || !message.value) {
-    alert('Please fill out all fields.');
+    alert('Veuillez remplir tous les champs.');
     return;
   }
 
-  const subject = `Message from ${name.value}`;
-  const body = `${message.value}\n\nFrom: ${name.value}\nEmail: ${email.value}`;
+  const subject = `Message de ${name.value}`;
+  const body = `${message.value}\n\nDe : ${name.value}\nEmail : ${email.value}`;
   const mailtoLink = `mailto:thomassilvestre31@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   
   window.location.href = mailtoLink;
-  alert('Your email client is opening to send the message. Please complete sending it from there.');
+  alert('Votre client mail va s\'ouvrir pour envoyer le message.');
 };
 </script>
 
 <template>
   <div class="contact-page">
     <div class="card">
-      <h1>Contact Us</h1>
-      <p>Have a question or some feedback? Drop us a line! We'd love to hear from you.</p>
+      <h1>Contactez-nous</h1>
+      <p>Une question ou un retour ? Écrivez-nous, on sera ravis de vous lire !</p>
       <form @submit.prevent="handleSubmit">
         <div class="form-group">
-          <label for="name">Your Name</label>
+          <label for="name">Votre nom</label>
           <input type="text" id="name" v-model="name" required />
         </div>
         <div class="form-group">
-          <label for="email">Your Email</label>
+          <label for="email">Votre email</label>
           <input type="email" id="email" v-model="email" required />
         </div>
         <div class="form-group">
-          <label for="message">Your Message</label>
+          <label for="message">Votre message</label>
           <textarea id="message" rows="6" v-model="message" required></textarea>
         </div>
-        <button type="submit">Send Message</button>
+        <button type="submit">Envoyer</button>
       </form>
     </div>
   </div>

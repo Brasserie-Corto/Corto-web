@@ -6,7 +6,7 @@ const cartStore = useCartStore();
 
 <template>
   <div class="cart-page">
-    <h1>Your Cart</h1>
+    <h1>Votre panier</h1>
     <div v-if="cartStore.items.length > 0" class="cart-content card">
       <div class="cart-items">
         <div v-for="item in cartStore.items" :key="item.beer.id" class="cart-item">
@@ -31,15 +31,15 @@ const cartStore = useCartStore();
         </div>
       </div>
       <div class="cart-summary">
-        <h2>Total: {{ cartStore.totalPrice }}€</h2>
-        <button class="checkout-btn">Proceed to Checkout</button>
+        <h2>Total : {{ cartStore.totalPrice }}€</h2>
+        <button class="checkout-btn">Passer commande</button>
       </div>
     </div>
     <div v-else class="empty-cart card">
-      <h2>Your cart is empty.</h2>
-      <p>Looks like you haven't added any beers yet. Let's fix that!</p>
+      <h2>Votre panier est vide.</h2>
+      <p>On dirait que vous n'avez pas encore ajouté de bières. Allez, on y va !</p>
       <router-link to="/">
-        <button>Continue Shopping</button>
+        <button>Continuer mes achats</button>
       </router-link>
     </div>
   </div>

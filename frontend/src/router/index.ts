@@ -44,6 +44,12 @@ const routes = [
     component: () => import('@/views/AdminView.vue'),
     meta: { requiresAuth: true, requiresAdmin: true },
   },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('@/views/NotFoundView.vue'),
+    meta: { requiresAuth: true },
+  },
 ];
 
 const router = createRouter({
@@ -51,14 +57,17 @@ const router = createRouter({
   routes,
 });
 
+let authInitialized = false;
+
 /**
  * Navigation guard to protect routes and redirect unauthorized users
  */
 router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore();
 
-  // Initialize auth on first navigation
-  if (!authStore.user && !authStore.loading) {
+  // Initialize auth only once on first navigation
+  if (!authInitialized) {
+    authInitialized = true;
     await authStore.initializeAuth();
   }
 
