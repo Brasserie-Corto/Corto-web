@@ -6,6 +6,11 @@
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 /**
+ * Contact phone number for Wero/Lydia payments
+ */
+export const PAYMENT_PHONE = import.meta.env.VITE_PAYMENT_PHONE || '06 00 00 00 00';
+
+/**
  * Helper function for API requests with error handling
  */
 export async function apiFetch<T>(

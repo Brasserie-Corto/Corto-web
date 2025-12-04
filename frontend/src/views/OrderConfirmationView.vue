@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { API_URL } from '@/config/api';
+import { API_URL, PAYMENT_PHONE } from '@/config/api';
 import type { Order } from '@/types';
 
 const route = useRoute();
@@ -93,7 +93,7 @@ const formatDate = (dateString: string) => {
             <div class="method-icon">💳</div>
             <div class="method-info">
               <h3>Wero</h3>
-              <p class="phone-number">06 06 06 06 06</p>
+              <p class="phone-number">{{ PAYMENT_PHONE }}</p>
               <p class="instruction">Envoyez {{ order.amount.toFixed(2) }}€ avec la référence : <strong>CORTO-{{ order.id }}</strong></p>
             </div>
           </div>
@@ -104,7 +104,7 @@ const formatDate = (dateString: string) => {
             <div class="method-icon">📲</div>
             <div class="method-info">
               <h3>Lydia</h3>
-              <p class="phone-number">06 06 06 06 06</p>
+              <p class="phone-number">{{ PAYMENT_PHONE }}</p>
               <p class="instruction">Envoyez {{ order.amount.toFixed(2) }}€ avec la référence : <strong>CORTO-{{ order.id }}</strong></p>
             </div>
           </div>
