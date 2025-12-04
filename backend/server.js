@@ -61,12 +61,18 @@ setInterval(cleanupExpiredReservations, 60 * 1000);
 
 // Helper to get stats
 const getStats = async () => {
-  const recipesRes = await pool.query("SELECT COUNT(*) as count, SUM(total_quantity) as volume FROM detailed_recipes");
+  const recipesRes = await pool.query("SELECT COUNT(DISTINCT r.id) as count FROM recipe r INNER JOIN beer b ON b.id_recipe = r.id");
+  // Litres brassés = somme des quantités initiales × volume en litres
+  const volumeRes = await pool.query(`
+    SELECT SUM(s.initial_quantity * c.volume / 1000.0) as total_liters
+    FROM stocked s
+    INNER JOIN contening c ON c.id = s.id_contening
+  `);
   const ordersRes = await pool.query("SELECT COUNT(*) as count FROM command");
   
   return {
     recipes_count: parseInt(recipesRes.rows[0].count) || 0,
-    liters_brewed: parseInt(recipesRes.rows[0].volume) || 0,
+    liters_brewed: Math.round(parseFloat(volumeRes.rows[0].total_liters) || 0),
     orders_count: parseInt(ordersRes.rows[0].count) || 0,
   };
 };

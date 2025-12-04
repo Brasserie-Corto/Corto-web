@@ -1,19 +1,63 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import BeerCard from '@/components/BeerCard.vue';
 import BeerFilters from '@/components/BeerFilters.vue';
 import { API_URL } from '@/config/api';
 import type { Beer } from '@/types';
 
 const beers = ref<Beer[]>([]);
+let ws: WebSocket | null = null;
 
-onMounted(async () => {
+const fetchBeers = async () => {
   try {
     const response = await fetch(`${API_URL}/beers`);
     if (!response.ok) throw new Error('Failed to fetch beers');
     beers.value = await response.json();
   } catch (error) {
     console.error('Erreur:', error);
+  }
+};
+
+const connectWebSocket = () => {
+  // Déduire l'URL WebSocket depuis API_URL
+  const wsUrl = API_URL.replace('http', 'ws');
+  ws = new WebSocket(wsUrl);
+  
+  ws.onopen = () => {
+    console.log('WebSocket connecté pour le stock temps réel');
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const message = JSON.parse(event.data);
+      if (message.type === 'STOCK_UPDATE') {
+        // Rafraîchir les bières quand le stock change
+        fetchBeers();
+      }
+    } catch (error) {
+      console.error('Erreur WebSocket:', error);
+    }
+  };
+
+  ws.onclose = () => {
+    console.log('WebSocket déconnecté, reconnexion dans 5s...');
+    setTimeout(connectWebSocket, 5000);
+  };
+
+  ws.onerror = (error) => {
+    console.error('Erreur WebSocket:', error);
+  };
+};
+
+onMounted(() => {
+  fetchBeers();
+  connectWebSocket();
+});
+
+onUnmounted(() => {
+  if (ws) {
+    ws.close();
+    ws = null;
   }
 });
 const filters = ref({
