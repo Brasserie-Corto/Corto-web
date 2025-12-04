@@ -24,3 +24,17 @@ npm run dev
 ```
 
 ## DATABASE INIT
+
+- Clone Supabase-fermentaire repo :
+```
+git clone git@github.com:Brasserie-Corto/Supabase-fermentaire.git
+```
+
+- Run docker :
+```
+sudo docker pull
+sudo docker compose up -d
+```
+
+- Log in at http://localhost:8000 with supabase:this_password_is_insecure_and_should_be_updated
+- Go to SQL editor and run the 2 sql file from Supabase-fermentaire
