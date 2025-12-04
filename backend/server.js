@@ -657,7 +657,7 @@ app.patch("/orders/:orderId/status", async (req, res) => {
     const { orderId } = req.params;
     const { status } = req.body;
     
-    const validStatuses = ['en attente de paiement', 'payée', 'en préparation', 'expédiée', 'livrée', 'annulée'];
+    const validStatuses = ['en attente de paiement', 'en attente de livraison', 'livré'];
     
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: "Invalid status", validStatuses });
@@ -676,6 +676,52 @@ app.patch("/orders/:orderId/status", async (req, res) => {
     broadcast({ type: "ORDER_UPDATE", data: rows[0] });
     
     res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Get all orders (admin)
+app.get("/admin/orders", async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT c.*, 
+              cl.name as client_name, 
+              cl.lastname as client_lastname,
+              cl.mail as client_email,
+              cl.phone as client_phone,
+              json_agg(json_build_object(
+                'beer_id', ct.id_beer,
+                'contening_id', ct.id_contening,
+                'quantity', ct.quantity,
+                'recipe_name', r.name,
+                'volume', cn.volume,
+                'price', r.price
+              )) as items
+       FROM command c
+       JOIN client cl ON cl.id = c.id_client
+       LEFT JOIN content ct ON ct.id_comand = c.id
+       LEFT JOIN beer b ON b.id = ct.id_beer
+       LEFT JOIN recipe r ON r.id = b.id_recipe
+       LEFT JOIN contening cn ON cn.id = ct.id_contening
+       GROUP BY c.id, cl.name, cl.lastname, cl.mail, cl.phone
+       ORDER BY c.order_date DESC`
+    );
+    
+    // Parse numeric values
+    const orders = rows.map(order => ({
+      ...order,
+      amount: parseFloat(order.amount),
+      items: order.items?.filter(item => item.beer_id !== null).map((item) => ({
+        ...item,
+        quantity: parseInt(item.quantity),
+        volume: parseInt(item.volume),
+        price: parseFloat(item.price)
+      })) || []
+    }));
+    
+    res.json(orders);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal Server Error" });

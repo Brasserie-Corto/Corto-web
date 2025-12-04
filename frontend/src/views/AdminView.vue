@@ -1,22 +1,28 @@
 <template>
   <div class="admin-container">
-    <h1>Admin Panel - Manage Users</h1>
+    <h1>Admin Panel</h1>
 
     <!-- Only admins can see this page -->
     <div v-if="!isAdmin" class="error-message">
-      <p>You do not have permission to access this page.</p>
+      <p>Vous n'avez pas la permission d'accéder à cette page.</p>
     </div>
 
     <div v-else>
+      <!-- Admin navigation -->
+      <div class="admin-nav">
+        <router-link to="/admin" class="admin-nav-link active">👥 Utilisateurs</router-link>
+        <router-link to="/admin/orders" class="admin-nav-link">📦 Commandes</router-link>
+      </div>
+
       <!-- Loading state -->
       <div v-if="loading" class="loading">
-        <p>Loading users...</p>
+        <p>Chargement des utilisateurs...</p>
       </div>
 
       <!-- Error state -->
       <div v-if="error" class="error-message">
         <p>{{ error }}</p>
-        <button @click="fetchPendingUsers">Retry</button>
+        <button @click="fetchPendingUsers">Réessayer</button>
       </div>
 
       <!-- Users table -->
@@ -342,6 +348,33 @@ table td {
 
 table tr:hover {
   background-color: #fafafa;
+}
+
+.admin-nav {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: var(--card-background);
+  border-radius: 8px;
+}
+
+.admin-nav-link {
+  padding: 0.75rem 1.5rem;
+  text-decoration: none;
+  color: var(--text-color);
+  border-radius: 4px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.admin-nav-link:hover {
+  background: #f0f0f0;
+}
+
+.admin-nav-link.router-link-exact-active {
+  background: var(--primary-color);
+  color: white;
 }
 
 .btn-activate,
