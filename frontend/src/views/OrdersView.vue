@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useAuthStore } from '@/store/auth';
-import { API_URL } from '@/config/api';
+import { API_URL, PAYMENT_PHONE } from '@/config/api';
 import type { Order } from '@/types';
 
 const authStore = useAuthStore();
@@ -112,7 +112,7 @@ const getStatusIcon = (status: string) => {
           </div>
           
           <div v-if="order.status === 'en attente de paiement'" class="payment-reminder">
-            <p>💳 En attente de votre paiement via Wero ou Lydia au <strong>06 06 06 06 06</strong></p>
+            <p>💳 En attente de votre paiement via Wero ou Lydia au <strong>{{ PAYMENT_PHONE }}</strong></p>
             <p class="reference">Référence : <strong>CORTO-{{ order.id }}</strong></p>
           </div>
         </div>
