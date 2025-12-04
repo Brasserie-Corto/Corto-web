@@ -68,7 +68,7 @@ const formatDate = (dateString: string) => {
               <p>{{ item.quantity }} x {{ item.price.toFixed(2) }}€</p>
             </div>
             <div class="item-subtotal">
-              {{ item.subtotal.toFixed(2) }}€
+              {{ (item.subtotal ?? item.price * item.quantity).toFixed(2) }}€
             </div>
           </div>
         </div>

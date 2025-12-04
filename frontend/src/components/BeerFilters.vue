@@ -3,6 +3,13 @@
 import { ref, onMounted } from 'vue';
 import { API_URL } from '@/config/api';
 
+interface Filters {
+  price: number;
+  types: string[];
+  colors: string[];
+  stock: string;
+}
+
 const beerColors = ref<string[]>([]);
 const maxPrice = ref(20);
 
@@ -25,7 +32,7 @@ onMounted(async () => {
   }
 });
 
-const filters = defineModel('filters');
+const filters = defineModel<Filters>('filters', { required: true });
 </script>
 
 <template>
