@@ -40,10 +40,10 @@ const handleLogout = async () => {
       </button>
 
       <nav class="nav" :class="{ open: menuOpen }">
-        <router-link to="/" @click="closeMenu">Boutique</router-link>
-        <router-link to="/about" @click="closeMenu">À propos</router-link>
-        <router-link to="/live" @click="closeMenu">La Brasserie</router-link>
-        <router-link to="/contact" @click="closeMenu">Contact</router-link>
+        <router-link v-if="authStore.isLoggedIn" to="/" @click="closeMenu">Boutique</router-link>
+        <router-link v-if="authStore.isLoggedIn" to="/about" @click="closeMenu">À propos</router-link>
+        <router-link v-if="authStore.isLoggedIn" to="/live" @click="closeMenu">La Brasserie</router-link>
+        <router-link v-if="authStore.isLoggedIn" to="/contact" @click="closeMenu">Contact</router-link>
         <!-- <router-link to="/dashboard">Dashboard</router-link> -->
         <router-link v-if="isAdmin" to="/admin" @click="closeMenu">Admin</router-link>
         
