@@ -68,7 +68,7 @@ const handleLogin = async () => {
       error.value = 'Votre compte est en attente de validation par un administrateur.';
     }
   } catch (err: any) {
-    error.value = err.message || 'Échec de la connexion. Vérifiez vos identifiants.';
+    error.value = 'Échec de la connexion. Vérifiez vos identifiants.';
   } finally {
     isLoading.value = false;
   }

@@ -49,4 +49,9 @@ const handleSubmit = () => {
   max-width: 700px;
   margin: 0 auto;
 }
+
+textarea {
+  resize: vertical;
+}
+
 </style>
