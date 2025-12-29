@@ -39,7 +39,7 @@ const filters = defineModel<Filters>('filters', { required: true });
   <aside class="filters-sidebar card">
     <h3>Filtres</h3>
     <div class="filter-group">
-      <label for="price-range">Prix max : {{ filters.price }}€</label>
+      <label for="price-range">Prix max : {{ filters.price }}€/L</label>
       <input 
         type="range" 
         id="price-range" 

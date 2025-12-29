@@ -112,7 +112,7 @@ onMounted(fetchOrders);
 </script>
 
 <template>
-  <div class="admin-container">
+  <div class="admin-orders">
     <h1>Admin Panel</h1>
 
     <div v-if="!isAdmin" class="error-message">
@@ -234,16 +234,14 @@ onMounted(fetchOrders);
 </template>
 
 <style scoped>
-.admin-container {
-  max-width: 1200px;
+.admin-orders {
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 1rem;
 }
 
 h1 {
-  font-size: 2rem;
   margin-bottom: 1.5rem;
-  color: #333;
+  color: var(--secondary-color);
 }
 
 .admin-nav {

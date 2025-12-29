@@ -270,14 +270,14 @@ onMounted(() => {
 
 <style scoped>
 .admin-container {
-  max-width: 1200px;
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 2rem;
 }
 
 h1 {
   font-size: 2rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
   color: #333;
 }
 
