@@ -1,9 +1,27 @@
 <script setup lang="ts">
+
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import BeerCard from '@/components/BeerCard.vue';
 import BeerFilters from '@/components/BeerFilters.vue';
 import { API_URL } from '@/config/api';
 import type { Beer } from '@/types';
+
+// Filtres, price sera mis à jour après le fetch
+const filters = ref({
+  price: 0,
+  types: [],
+  colors: [],
+  stock: 'all',
+});
+
+// Met à jour le filtre price avec le max pricePerLiter des bières
+const updatePriceFilterToMax = () => {
+  if (beers.value.length > 0) {
+    const maxPrice = Math.max(...beers.value.map(b => b.pricePerLiter));
+    filters.value.price = maxPrice;
+  }
+};
+
 
 const beers = ref<Beer[]>([]);
 let ws: WebSocket | null = null;
@@ -13,6 +31,7 @@ const fetchBeers = async () => {
     const response = await fetch(`${API_URL}/beers`);
     if (!response.ok) throw new Error('Failed to fetch beers');
     beers.value = await response.json();
+    updatePriceFilterToMax();
   } catch (error) {
     console.error('Erreur:', error);
   }
@@ -60,12 +79,7 @@ onUnmounted(() => {
     ws = null;
   }
 });
-const filters = ref({
-  price: 20,
-  types: [],
-  colors: [],
-  stock: 'all', 
-});
+
 
 const filteredBeers = computed(() => {
   return beers.value.filter((beer: Beer) => {
