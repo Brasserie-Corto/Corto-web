@@ -33,17 +33,17 @@ const handleLogout = async () => {
       <router-link to="/" class="brand" @click="closeMenu">Corto</router-link>
       
       <!-- Hamburger button for mobile -->
-      <button class="hamburger" @click="toggleMenu" :class="{ active: menuOpen }" aria-label="Menu">
+      <button v-if="authStore.isLoggedIn" class="hamburger" @click="toggleMenu" :class="{ active: menuOpen }" aria-label="Menu">
         <span></span>
         <span></span>
         <span></span>
       </button>
 
       <nav class="nav" :class="{ open: menuOpen }">
-        <router-link v-if="authStore.isLoggedIn" to="/" @click="closeMenu">Boutique</router-link>
-        <router-link v-if="authStore.isLoggedIn" to="/about" @click="closeMenu">À propos</router-link>
-        <router-link v-if="authStore.isLoggedIn" to="/live" @click="closeMenu">La Brasserie</router-link>
-        <router-link v-if="authStore.isLoggedIn" to="/contact" @click="closeMenu">Contact</router-link>
+        <router-link v-if="authStore.isLoggedIn && authStore.isActive" to="/" @click="closeMenu">Boutique</router-link>
+        <router-link v-if="authStore.isLoggedIn && authStore.isActive" to="/about" @click="closeMenu">À propos</router-link>
+        <router-link v-if="authStore.isLoggedIn && authStore.isActive" to="/live" @click="closeMenu">La Brasserie</router-link>
+        <router-link v-if="authStore.isLoggedIn && authStore.isActive" to="/contact" @click="closeMenu">Contact</router-link>
         <!-- <router-link to="/dashboard">Dashboard</router-link> -->
         <router-link v-if="isAdmin" to="/admin" @click="closeMenu">Admin</router-link>
         
@@ -51,7 +51,7 @@ const handleLogout = async () => {
         <div class="mobile-auth">
           <template v-if="authStore.isLoggedIn">
             <span class="welcome-message">Bienvenue, {{ authStore.user?.name }} !</span>
-            <router-link to="/orders" class="orders-link" @click="closeMenu">Mes commandes</router-link>
+            <router-link v-if="authStore.isActive" to="/orders" class="orders-link" @click="closeMenu">Mes commandes</router-link>
             <button @click="handleLogout" class="logout-btn">Déconnexion</button>
           </template>
           <router-link v-else to="/auth" class="login-link" @click="closeMenu">Connexion</router-link>
@@ -60,13 +60,13 @@ const handleLogout = async () => {
 
       <div class="actions">
         <div v-if="authStore.isLoggedIn" class="auth-actions">
-          <router-link to="/orders" class="orders-link">Mes commandes</router-link>
+          <router-link v-if="authStore.isActive" to="/orders" class="orders-link">Mes commandes</router-link>
           <span class="welcome-message">Bienvenue, {{ authStore.user?.name }} !</span>
           <button @click="handleLogout" class="logout-btn">Déconnexion</button>
         </div>
         <router-link v-else to="/auth" class="login-link">Connexion</router-link>
 
-        <router-link to="/cart" class="cart-link" aria-label="Voir le panier" @click="closeMenu">
+        <router-link v-if="authStore.isActive" to="/cart" class="cart-link" aria-label="Voir le panier" @click="closeMenu">
           <div class="cart">
             <span class="cart-icon" role="img" aria-hidden="true">🍺</span>
             <span class="cart-count" v-if="cartStore.totalItems > 0">{{ cartStore.totalItems }}</span>
