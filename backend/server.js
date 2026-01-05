@@ -198,8 +198,8 @@ app.get("/cart/:clientId", async (req, res) => {
     const { clientId } = req.params;
     
     const { rows } = await pool.query(
-      `SELECT r.id, r.id_recipe, r.id_contening, r.quantity, r.expires_at, r.created_at,
-              rec.name, rec.price as base_price, rec.image, rec.color,
+      `SELECT r.id, r.id_recipe, r.id_contening, r.quantity, r.price, r.expires_at, r.created_at,
+              rec.name, rec.image, rec.color,
               c.volume
        FROM reservation r
        JOIN recipe rec ON r.id_recipe = rec.id
@@ -211,16 +211,12 @@ app.get("/cart/:clientId", async (req, res) => {
     
     const cart = rows.map(item => {
       const volume = parseInt(item.volume); // volume en ml
-      const basePrice = parseFloat(item.base_price);
-      // volume en ml, donc diviser par 1000 pour avoir des litres
-      const price = parseFloat((basePrice * (volume / 1000)).toFixed(2));
-      
       return {
         ...item,
         id_contening: parseInt(item.id_contening),
         volume: volume,
         quantity: parseInt(item.quantity),
-        price: price,
+        price: parseFloat(item.price), // On utilise le prix stocké
         imageUrl: `${process.env.SUPABASE_URL}/storage/v1/object/public/${item.image?.replace('beer/', 'beers/') || item.image}`,
       };
     });
@@ -262,7 +258,23 @@ app.post("/cart/reserve", async (req, res) => {
       return res.status(400).json({ error: "Not enough stock available", available: availableQty });
     }
     
-    // Check if client already has a reservation for this recipe
+    // Récupérer le prix du contenant
+    const priceResult = await client.query(
+      `SELECT r.price as base_price, c.volume
+         FROM recipe r
+         JOIN contening c ON c.id = $1
+         WHERE r.id = $2`,
+      [conteningId, recipeId]
+    );
+    if (priceResult.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Contenant ou recette introuvable" });
+    }
+    const basePrice = parseFloat(priceResult.rows[0].base_price);
+    const volume = parseInt(priceResult.rows[0].volume);
+    const price = parseFloat((basePrice * (volume / 1000)).toFixed(2));
+
+    // Check if client already has a reservation pour ce contenant/recette
     const existingRes = await client.query(
       `SELECT id, quantity FROM reservation 
        WHERE id_client = $1 AND id_recipe = $2 AND id_contening = $3 AND expires_at > NOW()`,
@@ -273,14 +285,12 @@ app.post("/cart/reserve", async (req, res) => {
     const expiresAt = new Date(Date.now() + RESERVATION_DURATION_MINUTES * 60 * 1000);
     
     if (existingRes.rows.length > 0) {
-      // Update existing reservation
+      // Update existing reservation (on garde le même prix)
       const newQuantity = parseInt(existingRes.rows[0].quantity) + parseInt(quantity);
-      
       if (availableQty < quantity) {
         await client.query("ROLLBACK");
         return res.status(400).json({ error: "Not enough stock available", available: availableQty });
       }
-      
       const updateResult = await client.query(
         `UPDATE reservation SET quantity = $1, expires_at = $2 
          WHERE id = $3 RETURNING *`,
@@ -288,11 +298,11 @@ app.post("/cart/reserve", async (req, res) => {
       );
       reservation = updateResult.rows[0];
     } else {
-      // Create new reservation
+      // Create new reservation avec le prix du contenant
       const insertResult = await client.query(
-        `INSERT INTO reservation (id_client, id_recipe, id_contening, quantity, expires_at)
-         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-        [clientId, recipeId, conteningId, quantity, expiresAt]
+        `INSERT INTO reservation (id_client, id_recipe, id_contening, quantity, price, expires_at)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [clientId, recipeId, conteningId, quantity, price, expiresAt]
       );
       reservation = insertResult.rows[0];
     }
@@ -455,7 +465,7 @@ app.post("/orders", async (req, res) => {
     
     // Get active reservations
     const reservationsResult = await client.query(
-      `SELECT r.*, rec.price, rec.name
+      `SELECT r.*, rec.name
        FROM reservation r
        JOIN recipe rec ON r.id_recipe = rec.id
        WHERE r.id_client = $1 AND r.expires_at > NOW()`,
@@ -469,9 +479,9 @@ app.post("/orders", async (req, res) => {
     
     const reservations = reservationsResult.rows;
     
-    // Calculate total amount
+    // Calculate total amount en utilisant le prix stocké
     const totalAmount = reservations.reduce(
-      (sum, r) => sum + (r.price * r.quantity), 
+      (sum, r) => sum + (parseFloat(r.price) * r.quantity), 
       0
     );
     
@@ -504,13 +514,13 @@ app.post("/orders", async (req, res) => {
         
         const qtyToTake = Math.min(remainingQty, beer.stock_qty);
         
-        // Add to order content
+        // Add to order content avec le prix payé
         await client.query(
-          `INSERT INTO content (id_beer, id_contening, id_comand, quantity)
-           VALUES ($1, $2, $3, $4)
+          `INSERT INTO content (id_beer, id_contening, id_comand, quantity, price)
+           VALUES ($1, $2, $3, $4, $5)
            ON CONFLICT (id_beer, id_contening, id_comand) 
-           DO UPDATE SET quantity = content.quantity + $4`,
-          [beer.id, reservation.id_contening, order.id, qtyToTake]
+           DO UPDATE SET quantity = content.quantity + $4, price = $5`,
+          [beer.id, reservation.id_contening, order.id, qtyToTake, parseFloat(reservation.price)]
         );
         
         // Decrease stock
@@ -552,8 +562,8 @@ app.post("/orders", async (req, res) => {
         items: reservations.map(r => ({
           name: r.name,
           quantity: r.quantity,
-          price: r.price,
-          subtotal: r.price * r.quantity
+          price: parseFloat(r.price),
+          subtotal: parseFloat(r.price) * r.quantity
         })),
         total: totalAmount
       }
@@ -578,7 +588,7 @@ app.get("/orders/client/:clientId", async (req, res) => {
                 'beer_id', ct.id_beer,
                 'quantity', ct.quantity,
                 'recipe_name', r.name,
-                'price', r.price
+                'price', ct.price
               )) as items
        FROM command c
        LEFT JOIN content ct ON ct.id_comand = c.id
@@ -623,7 +633,7 @@ app.get("/orders/:orderId", async (req, res) => {
     }
     
     const itemsResult = await pool.query(
-      `SELECT ct.quantity, r.name, r.price, r.image
+      `SELECT ct.quantity, r.name, ct.price, r.image
        FROM content ct
        JOIN beer b ON b.id = ct.id_beer
        JOIN recipe r ON r.id = b.id_recipe
