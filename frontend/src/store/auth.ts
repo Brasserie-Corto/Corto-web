@@ -172,6 +172,50 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
+   * Request password reset email
+   */
+  async function resetPasswordForEmail(email: string): Promise<void> {
+    try {
+      loading.value = true;
+      error.value = null;
+
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (resetError) throw resetError;
+    } catch (err: any) {
+      error.value = err.message || 'Failed to send reset email';
+      console.error('Password reset error:', err);
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  /**
+   * Update password (used after password reset)
+   */
+  async function updatePassword(newPassword: string): Promise<void> {
+    try {
+      loading.value = true;
+      error.value = null;
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (updateError) throw updateError;
+    } catch (err: any) {
+      error.value = err.message || 'Failed to update password';
+      console.error('Update password error:', err);
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  /**
    * Listen to auth state changes
    */
   function setupAuthListener() {
@@ -199,6 +243,8 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     signup,
     logout,
+    resetPasswordForEmail,
+    updatePassword,
     setupAuthListener,
   };
 });
