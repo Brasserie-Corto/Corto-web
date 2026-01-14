@@ -7,6 +7,7 @@ const router = useRouter();
 const authStore = useAuthStore();
 
 const isLoginView = ref(true);
+const isForgotPasswordView = ref(false);
 const isLoading = ref(false);
 const error = ref<string | null>(null);
 const successMessage = ref<string | null>(null);
@@ -24,11 +25,40 @@ const signupConfirmPassword = ref('');
 const signupPhone = ref('');
 const signupAddress = ref('');
 
+// Forgot Password fields
+const forgotEmail = ref('');
+
 // Computed: Show pending activation message if user logged in but not active
 const isPendingActivation = computed(() => authStore.isLoggedIn && !authStore.isActive);
 
 const toggleView = () => {
   isLoginView.value = !isLoginView.value;
+  isForgotPasswordView.value = false;
+  isResetPasswordView.value = false;
+  clearForm();
+};
+
+const showForgotPassword = () => {
+  isForgotPasswordView.value = true;
+  isLoginView.value = false;
+  clearForm();
+};
+
+const hideForgotPassword = () => {
+  isForgotPasswordView.value = false;
+  isLoginView.value = true;
+  clearForm();
+};
+
+const showResetPassword = () => {
+  isResetPasswordView.value = true;
+  isForgotPasswordView.value = false;
+  clearForm();
+};
+
+const hideResetPassword = () => {
+  isForgotPasswordView.value = false;
+  isLoginView.value = true;
   clearForm();
 };
 
@@ -42,6 +72,7 @@ const clearForm = () => {
   signupConfirmPassword.value = '';
   signupPhone.value = '';
   signupAddress.value = '';
+  forgotEmail.value = '';
   error.value = null;
   successMessage.value = null;
 };
@@ -132,6 +163,35 @@ const handleLogout = async () => {
   error.value = null;
   successMessage.value = null;
 };
+
+const handleForgotPassword = async () => {
+  if (!forgotEmail.value) {
+    error.value = 'Veuillez entrer votre adresse email.';
+    return;
+  }
+
+  isLoading.value = true;
+  error.value = null;
+  successMessage.value = null;
+
+  try {
+    await authStore.resetPasswordForEmail(forgotEmail.value);
+    successMessage.value =
+      'Un email de réinitialisation a été envoyé à votre adresse. Veuillez vérifier votre boîte mail et cliquer sur le lien fourni.';
+    // Ne pas rediriger automatiquement - laisser l'utilisateur cliquer sur le lien dans l'email
+    setTimeout(() => {
+      successMessage.value = null;
+    }, 5000);
+  } catch (err: any) {
+    error.value = err.message || 'Échec de l\'envoi de l\'email de réinitialisation.';
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const handleResetPassword = async () => {
+  // This function is no longer used here - it's in ResetPasswordView.vue
+};
 </script>
 
 <template>
@@ -187,10 +247,13 @@ const handleLogout = async () => {
           Pas encore de compte ?
           <a href="#" @click.prevent="toggleView">S'inscrire</a>
         </p>
+        <p class="forgot-password-text">
+          <a href="#" @click.prevent="showForgotPassword">Mot de passe oublié ?</a>
+        </p>
       </div>
 
       <!-- Signup Form -->
-      <div v-else>
+      <div v-else-if="isLoginView === false && !isForgotPasswordView && !isResetPasswordView">
         <h1>Créer un compte</h1>
         <p class="form-note">* Champs obligatoires</p>
         <form @submit.prevent="handleSignup">
@@ -280,6 +343,31 @@ const handleLogout = async () => {
         <p class="toggle-text">
           Déjà un compte ?
           <a href="#" @click.prevent="toggleView">Se connecter</a>
+        </p>
+      </div>
+
+      <!-- Forgot Password Form -->
+      <div v-else-if="isForgotPasswordView">
+        <h1>Réinitialiser le mot de passe</h1>
+        <p class="form-note">Entrez votre adresse email pour recevoir un lien de réinitialisation.</p>
+        <form @submit.prevent="handleForgotPassword">
+          <div class="form-group">
+            <label for="forgot-email">Email</label>
+            <input
+              type="email"
+              id="forgot-email"
+              v-model="forgotEmail"
+              placeholder="votre@email.com"
+              required
+            />
+          </div>
+          <p v-if="error" class="error-message">{{ error }}</p>
+          <button type="submit" :disabled="isLoading" class="btn-primary">
+            {{ isLoading ? 'Envoi...' : 'Envoyer le lien de réinitialisation' }}
+          </button>
+        </form>
+        <p class="toggle-text">
+          <a href="#" @click.prevent="hideForgotPassword">Retour à la connexion</a>
         </p>
       </div>
     </div>
@@ -408,6 +496,22 @@ input:focus {
 }
 
 .toggle-text a:hover {
+  text-decoration: underline;
+}
+
+.forgot-password-text {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+.forgot-password-text a {
+  color: #8b5a00;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.forgot-password-text a:hover {
   text-decoration: underline;
 }
 
