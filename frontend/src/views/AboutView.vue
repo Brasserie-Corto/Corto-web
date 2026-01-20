@@ -6,7 +6,7 @@
         Deux potes, une appétence certaine pour la bière, et une cave dans une maison du Cantal. L'aventure Corto commence en 2024 avec l'envie de brasser nos propres bières artisanales, sans prétention, pour le plaisir de partager avec nos amis et notre famille.
       </p>
       <p>
-        On utilise principalement des ingrédients bio et locaux (dans la mesure du possible) et bientôt nos propres houblons cultivés dans le jardin de super Grands Parents.
+        On utilise principalement des ingrédients bio et locaux (dans la mesure du possible) et bientôt nos propres houblons cultivés dans le jardin de super grands-parents.
         N'étant pas des professionnels, on expérimente des recettes et des techniques. Chaque brassin est une nouvelle aventure, parfois réussie, parfois moins, mais c'est ok.
         C'est pourquoi certaines bières peuvent être un peu différentes d'un lot à l'autre, avec parfois des mousses un peu trop présentes. Nous vous demandons donc de prévoir une éponge en cas de débordement. En cas de problème majeur sur votre commande, n'hésitez pas à nous contacter.
       </p>
