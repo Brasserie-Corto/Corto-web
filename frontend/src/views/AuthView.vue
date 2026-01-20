@@ -34,7 +34,6 @@ const isPendingActivation = computed(() => authStore.isLoggedIn && !authStore.is
 const toggleView = () => {
   isLoginView.value = !isLoginView.value;
   isForgotPasswordView.value = false;
-  isResetPasswordView.value = false;
   clearForm();
 };
 
@@ -45,18 +44,6 @@ const showForgotPassword = () => {
 };
 
 const hideForgotPassword = () => {
-  isForgotPasswordView.value = false;
-  isLoginView.value = true;
-  clearForm();
-};
-
-const showResetPassword = () => {
-  isResetPasswordView.value = true;
-  isForgotPasswordView.value = false;
-  clearForm();
-};
-
-const hideResetPassword = () => {
   isForgotPasswordView.value = false;
   isLoginView.value = true;
   clearForm();
@@ -188,10 +175,6 @@ const handleForgotPassword = async () => {
     isLoading.value = false;
   }
 };
-
-const handleResetPassword = async () => {
-  // This function is no longer used here - it's in ResetPasswordView.vue
-};
 </script>
 
 <template>
@@ -253,7 +236,7 @@ const handleResetPassword = async () => {
       </div>
 
       <!-- Signup Form -->
-      <div v-else-if="isLoginView === false && !isForgotPasswordView && !isResetPasswordView">
+      <div v-else-if="isLoginView === false && !isForgotPasswordView">
         <h1>Créer un compte</h1>
         <p class="form-note">* Champs obligatoires</p>
         <form @submit.prevent="handleSignup">
