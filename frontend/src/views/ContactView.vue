@@ -1,22 +1,56 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useAuthStore } from '@/store/auth';
+import { API_URL } from '@/config/api';
 
-const name = ref('');
-const email = ref('');
+const authStore = useAuthStore();
+const subject = ref('');
 const message = ref('');
+const isSubmitting = ref(false);
+const submitMessage = ref('');
+const submitError = ref('');
 
-const handleSubmit = () => {
-  if (!name.value || !email.value || !message.value) {
-    alert('Veuillez remplir tous les champs.');
+const handleSubmit = async () => {
+  if (!subject.value || !message.value) {
+    submitError.value = 'Veuillez remplir tous les champs.';
     return;
   }
 
-  const subject = `Message de ${name.value}`;
-  const body = `${message.value}\n\nDe : ${name.value}\nEmail : ${email.value}`;
-  const mailtoLink = `mailto:thomassilvestre31@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  
-  window.location.href = mailtoLink;
-  alert('Votre client mail va s\'ouvrir pour envoyer le message.');
+  if (!authStore.user?.email) {
+    submitError.value = 'Vous devez être connecté pour envoyer un message.';
+    return;
+  }
+
+  isSubmitting.value = true;
+  submitError.value = '';
+  submitMessage.value = '';
+
+  try {
+    const response = await fetch(`${API_URL}/send-contact-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userEmail: authStore.user.email,
+        subject: subject.value,
+        message: message.value,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to send email');
+    }
+
+    submitMessage.value = 'Votre message a été envoyé avec succès !';
+    subject.value = '';
+    message.value = '';
+  } catch (error) {
+    console.error('Error sending email:', error);
+    submitError.value = 'Erreur lors de l\'envoi du message. Veuillez réessayer.';
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 </script>
 
@@ -25,20 +59,23 @@ const handleSubmit = () => {
     <div class="card">
       <h1>Contactez-nous</h1>
       <p>Une question ou un retour ? Écrivez-nous, on sera ravis de vous lire !</p>
-      <form @submit.prevent="handleSubmit">
+      <div v-if="!authStore.isLoggedIn" class="warning">
+        Vous devez être connecté pour envoyer un message.
+      </div>
+      <form v-else @submit.prevent="handleSubmit">
         <div class="form-group">
-          <label for="name">Votre nom</label>
-          <input type="text" id="name" v-model="name" required />
-        </div>
-        <div class="form-group">
-          <label for="email">Votre email</label>
-          <input type="email" id="email" v-model="email" required />
+          <label for="subject">Objet</label>
+          <input type="text" id="subject" v-model="subject" required />
         </div>
         <div class="form-group">
           <label for="message">Votre message</label>
           <textarea id="message" rows="6" v-model="message" required></textarea>
         </div>
-        <button type="submit">Envoyer</button>
+        <div v-if="submitError" class="error-message">{{ submitError }}</div>
+        <div v-if="submitMessage" class="success-message">{{ submitMessage }}</div>
+        <button type="submit" :disabled="isSubmitting">
+          {{ isSubmitting ? 'Envoi...' : 'Envoyer' }}
+        </button>
       </form>
     </div>
   </div>
@@ -54,4 +91,35 @@ textarea {
   resize: vertical;
 }
 
+.warning {
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  color: #856404;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.error-message {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+.success-message {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 </style>

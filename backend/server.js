@@ -4,6 +4,7 @@ import env from "dotenv";
 import pg from "pg";
 import { WebSocketServer } from "ws";
 import http from "http";
+import nodemailer from "nodemailer";
 
 env.config();
 
@@ -735,6 +736,43 @@ app.get("/admin/orders", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Configure SMTP transporter
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: process.env.SMTP_PORT,
+  secure: false, // true for 465, false for other ports
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
+
+// Send contact form email
+app.post("/send-contact-email", async (req, res) => {
+  try {
+    const { userEmail, subject, message } = req.body;
+
+    if (!userEmail || !subject || !message) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Send email to Corto
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to: process.env.SMTP_USER,
+      subject: subject,
+      text: `${message}\n\n---\nMessage reçu de: ${userEmail}`,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.json({ success: true, message: "Email sent successfully" });
+  } catch (err) {
+    console.error("Error sending email:", err);
+    res.status(500).json({ error: "Failed to send email" });
   }
 });
 
