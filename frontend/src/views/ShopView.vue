@@ -11,7 +11,7 @@ const filters = ref({
   price: 0,
   types: [],
   colors: [],
-  stock: 'all',
+  stock: 'inStock',
 });
 
 // Met à jour le filtre price avec le max pricePerLiter des bières
