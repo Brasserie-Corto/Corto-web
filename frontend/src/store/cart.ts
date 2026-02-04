@@ -60,7 +60,7 @@ export const useCartStore = defineStore('cart', () => {
   }
 
   // Add item to cart (creates reservation)
-  async function addItem(beer: Beer, contenantId: number) {
+  async function addItem(beer: Beer, contenantId: number, quantity: number = 1) {
     const clientId = authStore.user?.clientId;
     if (!clientId) {
       error.value = 'Vous devez être connecté';
@@ -78,7 +78,7 @@ export const useCartStore = defineStore('cart', () => {
           clientId,
           recipeId: beer.id,
           conteningId: contenantId,
-          quantity: 1,
+          quantity: quantity,
         }),
       });
 
