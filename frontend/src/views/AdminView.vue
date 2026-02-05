@@ -1,113 +1,8 @@
-<template>
-  <div class="admin-container">
-    <h1>Admin Panel</h1>
-
-    <!-- Only admins can see this page -->
-    <div v-if="!isAdmin" class="error-message">
-      <p>Vous n'avez pas la permission d'accéder à cette page.</p>
-    </div>
-
-    <div v-else>
-      <!-- Admin navigation -->
-      <div class="admin-nav">
-        <router-link to="/admin" class="admin-nav-link active">👥 Utilisateurs</router-link>
-        <router-link to="/admin/orders" class="admin-nav-link">📦 Commandes</router-link>
-      </div>
-
-      <!-- Loading state -->
-      <div v-if="loading" class="loading">
-        <p>Chargement des utilisateurs...</p>
-      </div>
-
-      <!-- Error state -->
-      <div v-if="error" class="error-message">
-        <p>{{ error }}</p>
-        <button @click="fetchPendingUsers">Réessayer</button>
-      </div>
-
-      <!-- Users table -->
-      <div v-if="!loading && !error" class="users-table">
-        <h2>Pending Users ({{ pendingUsers.length }})</h2>
-
-        <table v-if="pendingUsers.length > 0">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Created At</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="user in pendingUsers" :key="user.id">
-              <td>{{ user.name }} {{ user.lastname }}</td>
-              <td>{{ user.mail }}</td>
-              <td>{{ user.phone }}</td>
-              <td>{{ formatDate(user.created_at) }}</td>
-              <td>
-                <button 
-                  @click="activateUser(user.id)" 
-                  class="btn-activate"
-                  :disabled="activatingId === user.id"
-                >
-                  {{ activatingId === user.id ? 'Activating...' : 'Activate' }}
-                </button>
-                <button 
-                  @click="rejectUser(user.id)" 
-                  class="btn-reject"
-                  :disabled="rejectingId === user.id"
-                >
-                  {{ rejectingId === user.id ? 'Rejecting...' : 'Reject' }}
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <p v-else class="no-users">No pending users.</p>
-
-        <h2 style="margin-top: 2rem;">Active Users ({{ activeUsers.length }})</h2>
-
-        <table v-if="activeUsers.length > 0">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Activated At</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="user in activeUsers" :key="user.id">
-              <td>{{ user.name }} {{ user.lastname }}</td>
-              <td>{{ user.mail }}</td>
-              <td>{{ user.phone }}</td>
-              <td>{{ formatDate(user.created_at) }}</td>
-              <td>
-                <button 
-                  @click="deactivateUser(user.id)" 
-                  class="btn-deactivate"
-                  :disabled="deactivatingId === user.id"
-                >
-                  {{ deactivatingId === user.id ? 'Deactivating...' : 'Deactivate' }}
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <p v-else class="no-users">No active users.</p>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useAuthStore } from '@/store/auth';
 import { supabase } from '@/config/supabase';
+import AdminMenu from '@/components/admin/AdminMenu.vue';
 
 interface ClientUser {
   id: number;
@@ -129,11 +24,23 @@ const error = ref<string | null>(null);
 const activatingId = ref<number | null>(null);
 const rejectingId = ref<number | null>(null);
 const deactivatingId = ref<number | null>(null);
+const searchQuery = ref('');
 
 const isAdmin = computed(() => authStore.user?.role === 'admin');
 
-const pendingUsers = computed(() => users.value.filter(u => !u.is_active));
-const activeUsers = computed(() => users.value.filter(u => u.is_active));
+const matchesSearch = (user: ClientUser) => {
+  if (!searchQuery.value) return true;
+  const query = searchQuery.value.toLowerCase();
+  return (
+      (user.name?.toLowerCase() || '').includes(query) ||
+      (user.lastname?.toLowerCase() || '').includes(query) ||
+      (user.mail?.toLowerCase() || '').includes(query) ||
+      (user.phone || '').includes(query)
+  );
+};
+
+const pendingUsers = computed(() => users.value.filter(u => !u.is_active && matchesSearch(u)));
+const activeUsers = computed(() => users.value.filter(u => u.is_active && matchesSearch(u)));
 
 /**
  * Fetch all users from the client table
@@ -267,156 +174,254 @@ onMounted(() => {
 });
 </script>
 
+<template>
+  <div class="admin-users">
+    <div v-if="!isAdmin" class="error-message">Accès refusé.</div>
+
+    <template v-else>
+      <AdminMenu />
+
+      <div v-if="loading" class="loading">Chargement...</div>
+      <div v-if="error" class="error-message">
+        {{ error }} <button @click="fetchPendingUsers">Réessayer</button>
+      </div>
+
+      <div v-if="!loading && !error" class="users-content">
+
+        <div class="search-bar">
+          <input v-model="searchQuery" type="text" placeholder="🔍 " />
+        </div>
+
+        <div class="section-block">
+          <h2 class="section-title">En attente <span class="badge pending">{{ pendingUsers.length }}</span></h2>
+
+          <div v-if="pendingUsers.length === 0" class="no-users">
+            {{ searchQuery ? 'Aucun résultat.' : 'Aucune demande en attente.' }}
+          </div>
+
+          <div v-else class="users-list">
+            <div v-for="user in pendingUsers" :key="user.id" class="user-row compact">
+
+              <div class="col-identity">
+                <span class="user-name">{{ user.name }} {{ user.lastname }}</span>
+                <span class="user-date">{{ formatDate(user.created_at) }}</span>
+              </div>
+
+              <div class="col-contact">
+                <span class="info-tag">{{ user.mail }}</span>
+                <span class="info-tag">{{ user.phone }}</span>
+              </div>
+
+              <div class="col-actions">
+                <button
+                    @click="activateUser(user.id)"
+                    class="btn-icon success"
+                    title="Valider"
+                    :disabled="activatingId === user.id"
+                >
+                  {{ activatingId === user.id ? '...' : '✓' }}
+                </button>
+                <button
+                    @click="rejectUser(user.id)"
+                    class="btn-icon danger"
+                    title="Refuser"
+                    :disabled="rejectingId === user.id"
+                >
+                  {{ rejectingId === user.id ? '...' : '✕' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <h2 class="section-title">Actifs <span class="badge active">{{ activeUsers.length }}</span></h2>
+
+          <div v-if="activeUsers.length === 0" class="no-users">
+            {{ searchQuery ? 'Aucun résultat.' : 'Aucun utilisateur actif.' }}
+          </div>
+
+          <div v-else class="users-list">
+            <div v-for="user in activeUsers" :key="user.id" class="user-row compact">
+
+              <div class="col-identity">
+                <span class="user-name">{{ user.name }} {{ user.lastname }}</span>
+                <span class="user-date">{{ formatDate(user.created_at) }}</span>
+              </div>
+
+              <div class="col-contact">
+                <span class="info-tag">{{ user.mail }}</span>
+                <span class="info-tag">{{ user.phone }}</span>
+              </div>
+
+              <div class="col-actions">
+                <button
+                    @click="deactivateUser(user.id)"
+                    class="btn-icon warning"
+                    title="Désactiver"
+                    :disabled="deactivatingId === user.id"
+                >
+                  {{ deactivatingId === user.id ? '...' : '⊘' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </template>
+  </div>
+</template>
+
 <style scoped>
-.admin-container {
+.admin-users {
   max-width: 1000px;
   margin: 0 auto;
   padding: 2rem;
 }
 
-h1 {
-  font-size: 2rem;
+.search-bar {
   margin-bottom: 2rem;
-  color: #333;
+}
+.search-bar input {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
 }
 
-h2 {
-  font-size: 1.5rem;
+.section-block {
+  margin-bottom: 2.5rem;
+}
+
+.section-title {
+  font-size: 1.1rem;
   margin-bottom: 1rem;
-  color: #555;
+  color: var(--secondary-color);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.error-message {
-  background-color: #fee;
-  border: 1px solid #fcc;
-  color: #c33;
-  padding: 1rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-}
-
-.error-message button {
-  background-color: #c33;
+.badge {
+  font-size: 0.75rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 10px;
   color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-top: 0.5rem;
+  vertical-align: middle;
 }
+.badge.pending { background: #f59e0b; }
+.badge.active { background: #10b981; }
 
-.error-message button:hover {
-  background-color: #a22;
-}
-
-.loading {
+.loading, .error-message, .no-users {
   text-align: center;
   padding: 2rem;
-  font-size: 1.1rem;
+  background: var(--card-background, #fff);
+  border-radius: 8px;
   color: #666;
+  font-size: 0.9rem;
 }
 
-.no-users {
-  color: #999;
-  font-style: italic;
-  padding: 1rem;
+/* --- COMPACT ROW SYSTEM --- */
+.users-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.users-table {
-  margin-top: 1rem;
+.user-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card-background, #fff);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  border: 1px solid transparent;
+  transition: all 0.2s;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 2rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+.user-row:hover {
+  transform: translateX(2px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border-color: #eee;
 }
 
-table thead {
-  background-color: #f5f5f5;
-  font-weight: bold;
+.col-identity {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
 }
 
-table th,
-table td {
-  padding: 1rem;
-  text-align: left;
-  border-bottom: 1px solid #ddd;
+.user-name {
+  font-weight: 600;
+  color: var(--text-color, #333);
+  font-size: 0.95rem;
 }
 
-table tr:hover {
-  background-color: #fafafa;
+.user-date {
+  font-size: 0.75rem;
+  color: #888;
 }
 
-.admin-nav {
+.col-contact {
+  flex: 1;
   display: flex;
   gap: 1rem;
-  margin-bottom: 2rem;
-  padding: 1rem;
-  background: var(--card-background);
-  border-radius: 8px;
+  flex-wrap: wrap;
+  padding: 0 1rem;
 }
 
-.admin-nav-link {
-  padding: 0.75rem 1.5rem;
-  text-decoration: none;
-  color: var(--text-color);
+.info-tag {
+  background: #f3f4f6;
+  padding: 0.2rem 0.6rem;
   border-radius: 4px;
-  font-weight: 500;
-  transition: background 0.2s;
+  font-size: 0.85rem;
+  color: #555;
+  white-space: nowrap;
 }
 
-.admin-nav-link:hover {
-  background: #f0f0f0;
+.col-actions {
+  display: flex;
+  gap: 0.5rem;
 }
 
-.admin-nav-link.router-link-exact-active {
-  background: var(--primary-color);
-  color: white;
-}
-
-.btn-activate,
-.btn-deactivate,
-.btn-reject {
-  padding: 0.5rem 1rem;
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
-  margin-right: 0.5rem;
-  font-size: 0.9rem;
-  transition: background-color 0.2s;
-}
-
-.btn-activate {
-  background-color: #28a745;
+  font-size: 1rem;
+  transition: background 0.2s;
   color: white;
 }
 
-.btn-activate:hover:not(:disabled) {
-  background-color: #218838;
-}
+.btn-icon.success { background-color: #10b981; }
+.btn-icon.success:hover:not(:disabled) { background-color: #059669; }
 
-.btn-deactivate {
-  background-color: #ffc107;
-  color: #333;
-}
+.btn-icon.danger { background-color: #ef4444; }
+.btn-icon.danger:hover:not(:disabled) { background-color: #dc2626; }
 
-.btn-deactivate:hover:not(:disabled) {
-  background-color: #e0a800;
-}
+.btn-icon.warning { background-color: #f59e0b; }
+.btn-icon.warning:hover:not(:disabled) { background-color: #d97706; }
 
-.btn-reject {
-  background-color: #dc3545;
-  color: white;
-}
+.btn-icon:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.btn-reject:hover:not(:disabled) {
-  background-color: #c82333;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+@media (max-width: 768px) {
+  .user-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  .col-contact { padding: 0; width: 100%; }
+  .col-actions { width: 100%; justify-content: flex-end; }
 }
 </style>
