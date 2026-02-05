@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useAuthStore } from '@/store/auth';
 import { API_URL } from '@/config/api';
+import AdminMenu from '@/components/admin/AdminMenu.vue';
 
 interface OrderItem {
   beer_id: number;
@@ -113,18 +114,12 @@ onMounted(fetchOrders);
 
 <template>
   <div class="admin-orders">
-    <h1>Admin Panel</h1>
-
     <div v-if="!isAdmin" class="error-message">
       <p>Vous n'avez pas la permission d'accéder à cette page.</p>
     </div>
 
     <template v-else>
-      <!-- Admin navigation -->
-      <div class="admin-nav">
-        <router-link to="/admin" class="admin-nav-link">👥 Utilisateurs</router-link>
-        <router-link to="/admin/orders" class="admin-nav-link">📦 Commandes</router-link>
-      </div>
+      <AdminMenu />
 
       <!-- Stats -->
       <div class="stats-grid">
@@ -242,33 +237,6 @@ onMounted(fetchOrders);
 h1 {
   margin-bottom: 1.5rem;
   color: var(--secondary-color);
-}
-
-.admin-nav {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  padding: 1rem;
-  background: var(--card-background);
-  border-radius: 8px;
-}
-
-.admin-nav-link {
-  padding: 0.75rem 1.5rem;
-  text-decoration: none;
-  color: var(--text-color);
-  border-radius: 4px;
-  font-weight: 500;
-  transition: background 0.2s;
-}
-
-.admin-nav-link:hover {
-  background: #f0f0f0;
-}
-
-.admin-nav-link.router-link-exact-active {
-  background: var(--primary-color);
-  color: white;
 }
 
 .stats-grid {
