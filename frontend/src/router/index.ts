@@ -107,16 +107,16 @@ router.beforeEach(async (to, _from, next) => {
   if (to.meta.requiresAuth) {
     // Not logged in: redirect to auth
     if (!authStore.isLoggedIn) {
-      next('/auth');
-      return;
+    next({ path: '/auth', query: { mode: 'login' } });
+    return;
     }
 
     // Logged in but not activated by admin: redirect to auth with message
     if (!authStore.isActive) {
-      next('/auth');
-      return;
+    next({ path: '/auth', query: { mode: 'login' } });
+    return;
     }
-  }
+}
 
   // Already authenticated and trying to access /auth: redirect to home
   if (to.path === '/auth' && authStore.isLoggedIn && authStore.isActive) {

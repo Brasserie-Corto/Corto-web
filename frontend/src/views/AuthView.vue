@@ -1,16 +1,25 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, computed, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/store/auth';
 
 const router = useRouter();
+const route = useRoute();
 const authStore = useAuthStore();
 
-const isLoginView = ref(true);
+const isLoginView = ref(route.query.mode !== 'register');
 const isForgotPasswordView = ref(false);
 const isLoading = ref(false);
 const error = ref<string | null>(null);
 const successMessage = ref<string | null>(null);
+
+watch(() => route.query.mode, (newMode) => {
+  isLoginView.value = newMode !== 'register';
+  isForgotPasswordView.value = false;
+  clearForm();
+  error.value = null;
+  successMessage.value = null;
+});
 
 // Login form fields
 const loginEmail = ref('');
@@ -32,9 +41,8 @@ const forgotEmail = ref('');
 const isPendingActivation = computed(() => authStore.isLoggedIn && !authStore.isActive);
 
 const toggleView = () => {
-  isLoginView.value = !isLoginView.value;
-  isForgotPasswordView.value = false;
-  clearForm();
+  const targetMode = isLoginView.value ? 'register' : 'login';
+  router.push({ query: { ...route.query, mode: targetMode } });
 };
 
 const showForgotPassword = () => {
@@ -45,7 +53,7 @@ const showForgotPassword = () => {
 
 const hideForgotPassword = () => {
   isForgotPasswordView.value = false;
-  isLoginView.value = true;
+  router.push({ query: { ...route.query, mode: 'login' } });
   clearForm();
 };
 
