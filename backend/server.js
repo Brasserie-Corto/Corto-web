@@ -106,6 +106,7 @@ app.get("/beers", async (req, res) => {
         beersMap.set(beerId, {
           id: parseInt(beerId),
           name: row.name,
+          description: row.description,
           color: row.color,
           basePrice: parseFloat(row.base_price),
           pricePerLiter: parseFloat(row.base_price), // Le prix en base est pour 1L
@@ -456,8 +457,8 @@ app.post("/cart/extend/:clientId", async (req, res) => {
 app.post("/orders", async (req, res) => {
   const client = await pool.connect();
   try {
-    const { clientId } = req.body;
-    
+    const { clientId, customAmount } = req.body;
+
     if (!clientId) {
       return res.status(400).json({ error: "clientId is required" });
     }
@@ -479,19 +480,29 @@ app.post("/orders", async (req, res) => {
     }
     
     const reservations = reservationsResult.rows;
-    
-    // Calculate total amount en utilisant le prix stocké
-    const totalAmount = reservations.reduce(
-      (sum, r) => sum + (parseFloat(r.price) * r.quantity), 
-      0
+
+    // Calculate total amount base
+    const calculatedTotal = reservations.reduce(
+        (sum, r) => sum + (parseFloat(r.price) * r.quantity),
+        0
     );
-    
+
+    // Determine final amount (custom vs calculated)
+    let finalAmount = calculatedTotal;
+    if (customAmount !== undefined) {
+      const parsedCustom = parseFloat(customAmount);
+      // Ensure custom amount isn't less than calculated total (validation)
+      if (!isNaN(parsedCustom) && parsedCustom >= calculatedTotal) {
+        finalAmount = parsedCustom;
+      }
+    }
+
     // Create order
     const orderResult = await client.query(
-      `INSERT INTO command (id_client, amount, status)
-       VALUES ($1, $2, 'en attente de paiement')
-       RETURNING *`,
-      [clientId, totalAmount]
+        `INSERT INTO command (id_client, amount, status)
+         VALUES ($1, $2, 'en attente de paiement')
+           RETURNING *`,
+        [clientId, finalAmount]
     );
     
     const order = orderResult.rows[0];
@@ -566,7 +577,7 @@ app.post("/orders", async (req, res) => {
           price: parseFloat(r.price),
           subtotal: parseFloat(r.price) * r.quantity
         })),
-        total: totalAmount
+        total: parseFloat(order.amount)
       }
     });
   } catch (err) {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCartStore } from '@/store/cart';
 
@@ -7,10 +7,13 @@ const cartStore = useCartStore();
 const router = useRouter();
 const now = ref(new Date());
 let timerInterval: number | null = null;
+const customTotal = ref(0);
 
-// Update "now" every second for countdown
-onMounted(() => {
-  cartStore.fetchCart();
+onMounted(async () => {
+  await cartStore.fetchCart();
+  // Init customTotal with store value
+  customTotal.value = parseFloat(cartStore.totalPrice);
+
   timerInterval = window.setInterval(() => {
     now.value = new Date();
   }, 1000);
@@ -18,6 +21,14 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (timerInterval) clearInterval(timerInterval);
+});
+
+// Watch for price changes from store
+watch(() => cartStore.totalPrice, (newVal) => {
+  const val = parseFloat(newVal);
+  if (!isNaN(val)) {
+    customTotal.value = val;
+  }
 });
 
 // Computed countdown
@@ -34,8 +45,51 @@ const isExpiringSoon = computed(() => {
   return countdown.value && !countdown.value.expired && countdown.value.minutes < 5;
 });
 
+const initialTotal = computed(() => parseFloat(cartStore.totalPrice));
+
+const isModified = computed(() => {
+  return customTotal.value > initialTotal.value;
+});
+
+const canRoundUp = computed(() => {
+  // Show round up button only if decimal part exists
+  return customTotal.value % 1 !== 0;
+});
+
+const roundUpDiff = computed(() => {
+  if (!canRoundUp.value) return 0;
+  const nextInt = Math.ceil(customTotal.value);
+  return (nextInt - customTotal.value).toFixed(2);
+});
+
+const handleRoundUp = () => {
+  customTotal.value = Math.ceil(customTotal.value);
+};
+
+const handleIncrement = () => {
+  customTotal.value += 1;
+};
+
+const handleDecrement = () => {
+  if (customTotal.value - 1 >= initialTotal.value) {
+    customTotal.value -= 1;
+  } else {
+    customTotal.value = initialTotal.value;
+  }
+};
+
+const validateInput = () => {
+  if (
+      typeof customTotal.value !== 'number' ||
+      isNaN(customTotal.value) ||
+      customTotal.value < initialTotal.value
+  ) {
+    customTotal.value = initialTotal.value;
+  }
+};
+
 const handleCheckout = async () => {
-  const order = await cartStore.checkout();
+  const order = await cartStore.checkout(customTotal.value);
   if (order) {
     router.push({ name: 'OrderConfirmation', params: { orderId: order.id } });
   }
@@ -103,7 +157,39 @@ const handleExtendTime = () => {
         </div>
       </div>
       <div class="cart-summary">
-        <h2>Total : {{ cartStore.totalPrice }}€</h2>
+        <h2>Total à payer</h2>
+
+        <div class="price-editor">
+          <button
+              v-if="canRoundUp"
+              @click="handleRoundUp"
+              class="round-up-btn"
+          >
+            Arrondir (+{{ roundUpDiff }}€)
+          </button>
+
+          <div class="price-input-wrapper">
+            <input
+                type="number"
+                v-model.number="customTotal"
+                @change="validateInput"
+                @blur="validateInput"
+                :min="initialTotal"
+                step="0.01"
+                class="price-input"
+            />
+            <div class="price-controls">
+              <button @click="handleIncrement" class="control-btn up">▲</button>
+              <button @click="handleDecrement" class="control-btn down">▼</button>
+            </div>
+            <span class="currency">€</span>
+          </div>
+        </div>
+
+        <p v-if="isModified" class="initial-price-info">
+          Prix initial : {{ initialTotal.toFixed(2) }}€
+        </p>
+
         <button @click="handleCheckout" class="checkout-btn" :disabled="cartStore.loading">
           {{ cartStore.loading ? 'Traitement...' : 'Passer commande' }}
         </button>
@@ -277,7 +363,9 @@ const handleExtendTime = () => {
 
 .cart-summary {
   margin-top: 2rem;
-  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   border-top: 2px solid var(--secondary-color);
   padding-top: 2rem;
 }
@@ -286,9 +374,103 @@ const handleExtendTime = () => {
   margin-bottom: 1rem;
 }
 
+.price-editor {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  justify-content: flex-end;
+}
+
+.price-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  height: 50px;
+}
+
+.price-input {
+  font-size: 1.5rem;
+  font-weight: bold;
+  padding: 0 1rem;
+  width: 120px;
+  text-align: right;
+  border: 2px solid var(--border-color);
+  border-right: none;
+  border-radius: 6px 0 0 6px;
+  color: var(--primary-color);
+  background: white;
+  height: 100%;
+}
+
+.price-input::-webkit-outer-spin-button,
+.price-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.price-input[type=number] {
+  -moz-appearance: textfield;
+}
+
+.price-controls {
+  display: flex;
+  flex-direction: column;
+  width: 40px;
+}
+
+.control-btn {
+  flex: 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  border: 2px solid var(--border-color);
+  background: #f1f3f5;
+  cursor: pointer;
+  color: #333;
+  transition: all 0.2s;
+}
+
+.control-btn.up {
+  border-radius: 0 6px 0 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.control-btn.down {
+  border-radius: 0 0 6px 0;
+  border-top: none;
+}
+
+.control-btn:hover {
+  background: #e9ecef;
+  color: var(--primary-color);
+}
+
+.control-btn:active {
+  background: #dee2e6;
+}
+
+.currency {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-left: 0.75rem;
+  color: var(--text-color);
+  align-self: center;
+}
+
+.initial-price-info {
+  font-size: 0.9rem;
+  color: #666;
+  font-style: italic;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
 .checkout-btn {
   width: 100%;
   max-width: 300px;
+  margin-top: 1rem;
 }
 
 .checkout-btn:disabled {
@@ -341,6 +523,20 @@ const handleExtendTime = () => {
     grid-column: 3 / 4;
     grid-row: 2 / 3;
     align-self: flex-end;
+  }
+
+  .cart-summary {
+    align-items: stretch;
+  }
+
+  .price-editor {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.75rem;
+  }
+
+  .round-up-btn {
+    padding: 0.75rem 1rem;
   }
 }
 </style>
