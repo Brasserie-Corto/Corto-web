@@ -153,7 +153,6 @@ async function fetchPendingUsers() {
     users.value = data || [];
   } catch (err: any) {
     error.value = err.message || 'Failed to fetch users';
-    console.error('Fetch users error:', err);
   } finally {
     loading.value = false;
   }
