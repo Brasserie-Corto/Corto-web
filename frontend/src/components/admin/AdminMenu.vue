@@ -3,8 +3,6 @@ import { Users, Package, Calendar, TicketPercent } from 'lucide-vue-next';
 </script>
 
 <template>
-  <h1>Admin Panel</h1>
-
   <div class="admin-nav">
     <router-link to="/admin/users" class="admin-nav-link link-users">
       <Users :size="20" class="nav-icon" />
