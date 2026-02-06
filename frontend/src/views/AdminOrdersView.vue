@@ -230,6 +230,7 @@ onMounted(fetchOrders);
 
 <style scoped>
 .admin-orders {
+  padding: 2rem;
   max-width: 1000px;
   margin: 0 auto;
 }
