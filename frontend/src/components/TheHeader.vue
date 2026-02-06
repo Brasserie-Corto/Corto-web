@@ -45,7 +45,7 @@ const handleLogout = async () => {
         <router-link v-if="authStore.isLoggedIn && authStore.isActive" to="/live" @click="closeMenu">La Brasserie</router-link>
         <router-link v-if="authStore.isLoggedIn && authStore.isActive" to="/contact" @click="closeMenu">Contact</router-link>
         <!-- <router-link to="/dashboard">Dashboard</router-link> -->
-        <router-link v-if="isAdmin" to="/admin" @click="closeMenu">Admin</router-link>
+        <router-link v-if="isAdmin" to="/admin/users" @click="closeMenu">Admin</router-link>
         
         <!-- Mobile auth actions -->
         <div class="mobile-auth">

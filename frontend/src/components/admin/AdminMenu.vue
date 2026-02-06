@@ -4,7 +4,7 @@
 <template>
   <h1>Admin Panel</h1>
   <div class="admin-nav">
-    <router-link to="/admin" class="admin-nav-link">
+    <router-link to="/admin/users" class="admin-nav-link">
       👥 Utilisateurs
     </router-link>
 
@@ -14,6 +14,10 @@
 
     <router-link to="/admin/calendar" class="admin-nav-link">
       📅 Calendrier
+    </router-link>
+
+    <router-link to="/admin/promotion" class="admin-nav-link">
+      📅 Promotions
     </router-link>
   </div>
 </template>
