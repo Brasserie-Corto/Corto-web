@@ -1,23 +1,29 @@
 <script setup lang="ts">
+import { Users, Package, Calendar, TicketPercent } from 'lucide-vue-next';
 </script>
 
 <template>
   <h1>Admin Panel</h1>
+
   <div class="admin-nav">
-    <router-link to="/admin/users" class="admin-nav-link">
-      👥 Utilisateurs
+    <router-link to="/admin/users" class="admin-nav-link link-users">
+      <Users :size="20" class="nav-icon" />
+      Utilisateurs
     </router-link>
 
-    <router-link to="/admin/orders" class="admin-nav-link">
-      📦 Commandes
+    <router-link to="/admin/orders" class="admin-nav-link link-orders">
+      <Package :size="20" class="nav-icon" />
+      Commandes
     </router-link>
 
-    <router-link to="/admin/calendar" class="admin-nav-link">
-      📅 Calendrier
+    <router-link to="/admin/calendar" class="admin-nav-link link-calendar">
+      <Calendar :size="20" class="nav-icon" />
+      Calendrier
     </router-link>
 
-    <router-link to="/admin/promotion" class="admin-nav-link">
-      📅 Promotions
+    <router-link to="/admin/promotion" class="admin-nav-link link-promo">
+      <TicketPercent :size="20" class="nav-icon" />
+      Promotions
     </router-link>
   </div>
 </template>
@@ -43,16 +49,28 @@
   transition: all 0.2s;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .admin-nav-link:hover {
-  background: #f0f0f0;
+  background: #f8f9fa;
+  transform: translateY(-1px);
 }
+
+.link-users .nav-icon { color: #3b82f6; }   /* Bleu */
+.link-orders .nav-icon { color: #f59e0b; }  /* Orange */
+.link-calendar .nav-icon { color: #8b5cf6; }/* Violet */
+.link-promo .nav-icon { color: #10b981; }   /* Vert */
 
 .admin-nav-link.router-link-active,
 .admin-nav-link.router-link-exact-active {
   background: var(--primary-color, #d4a017);
   color: white;
+  box-shadow: 0 4px 6px rgba(212, 160, 23, 0.2);
+}
+
+.admin-nav-link.router-link-active .nav-icon,
+.admin-nav-link.router-link-exact-active .nav-icon {
+  color: white !important;
 }
 </style>
