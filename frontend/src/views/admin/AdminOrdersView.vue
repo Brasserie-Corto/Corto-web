@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
-import { useAuthStore } from '@/store/auth';
-import { API_URL } from '@/config/api';
+import { useAuthStore } from '@/store/auth.ts';
+import { API_URL } from '@/config/api.ts';
 import AdminMenu from '@/components/admin/AdminMenu.vue';
 
 interface OrderItem {

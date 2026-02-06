@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { useCartStore } from '@/store/cart';
+import { useCartStore } from '@/store/cart.ts';
 
 const cartStore = useCartStore();
 const router = useRouter();

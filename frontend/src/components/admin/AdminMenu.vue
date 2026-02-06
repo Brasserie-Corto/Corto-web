@@ -19,7 +19,7 @@ import { Users, Package, Calendar, TicketPercent } from 'lucide-vue-next';
       Calendrier
     </router-link>
 
-    <router-link to="/admin/promotion" class="admin-nav-link link-promo">
+    <router-link to="/admin/promotions" class="admin-nav-link link-promo">
       <TicketPercent :size="20" class="nav-icon" />
       Promotions
     </router-link>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
-import { useAuthStore } from '@/store/auth';
-import { supabase } from '@/config/supabase';
+import { useAuthStore } from '@/store/auth.ts';
+import { supabase } from '@/config/supabase.ts';
 import AdminMenu from '@/components/admin/AdminMenu.vue';
 
 interface ClientUser {
