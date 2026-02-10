@@ -209,7 +209,7 @@ const handleAddToCart = async () => {
 }
 
 .beer-image-container {
-  height: 170px;
+  height: 250px;
   position: relative;
   background-color: #f9f9f9;
   margin: 0.5rem;
@@ -221,8 +221,8 @@ const handleAddToCart = async () => {
 .beer-image {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  padding: 0.5rem;
+  object-fit: cover;
+  padding: 8px;
   border-radius: 12px;
 }
 
