@@ -60,7 +60,7 @@ export const useCartStore = defineStore('cart', () => {
   }
 
   // Add item to cart (creates reservation)
-  async function addItem(beer: Beer, contenantId: number) {
+  async function addItem(beer: Beer, contenantId: number, quantity: number = 1) {
     const clientId = authStore.user?.clientId;
     if (!clientId) {
       error.value = 'Vous devez être connecté';
@@ -78,7 +78,7 @@ export const useCartStore = defineStore('cart', () => {
           clientId,
           recipeId: beer.id,
           conteningId: contenantId,
-          quantity: 1,
+          quantity: quantity,
         }),
       });
 
@@ -223,7 +223,7 @@ export const useCartStore = defineStore('cart', () => {
   }
 
   // Checkout - create order
-  async function checkout() {
+  async function checkout(customTotal?: number) {
     const clientId = authStore.user?.clientId;
     if (!clientId) {
       error.value = 'Vous devez être connecté';
@@ -237,7 +237,10 @@ export const useCartStore = defineStore('cart', () => {
       const response = await fetch(`${API_URL}/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientId }),
+        body: JSON.stringify({
+          clientId,
+          customAmount: customTotal
+        }),
       });
 
       const data = await response.json();

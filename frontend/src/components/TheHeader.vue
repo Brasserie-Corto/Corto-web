@@ -54,7 +54,7 @@ const handleLogout = async () => {
             <router-link v-if="authStore.isActive" to="/orders" class="orders-link" @click="closeMenu">Mes commandes</router-link>
             <button @click="handleLogout" class="logout-btn">Déconnexion</button>
           </template>
-          <router-link v-else to="/auth" class="login-link" @click="closeMenu">Connexion</router-link>
+          <router-link v-else :to="{ path: '/auth', query: { mode: 'login' } }" class="login-link" @click="closeMenu">Connexion</router-link>
         </div>
       </nav>
 
@@ -64,7 +64,7 @@ const handleLogout = async () => {
           <span class="welcome-message">Bienvenue, {{ authStore.user?.name }} !</span>
           <button @click="handleLogout" class="logout-btn">Déconnexion</button>
         </div>
-        <router-link v-else to="/auth" class="login-link">Connexion</router-link>
+        <router-link v-else :to="{ path: '/auth', query: { mode: 'login' } }" class="login-link">Connexion</router-link>
 
         <router-link v-if="authStore.isActive" to="/cart" class="cart-link" aria-label="Voir le panier" @click="closeMenu">
           <div class="cart">
