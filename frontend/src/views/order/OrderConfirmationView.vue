@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { API_URL, PAYMENT_PHONE } from '@/config/api';
+import { API_URL, PAYMENT_PHONE } from '@/config/api.ts';
 import type { Order } from '@/types';
 
 const route = useRoute();

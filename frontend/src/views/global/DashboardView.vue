@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
-import { API_URL } from '@/config/api';
+import { API_URL } from '@/config/api.ts';
 
 // WebSocket URL (convert http to ws)
 const WS_URL = API_URL.replace(/^http/, 'ws');

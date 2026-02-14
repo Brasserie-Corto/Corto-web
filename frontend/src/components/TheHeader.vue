@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useCartStore } from '@/store/cart';
 import { useAuthStore } from '@/store/auth';
 import { computed, ref } from 'vue';
@@ -7,6 +7,7 @@ import { computed, ref } from 'vue';
 const cartStore = useCartStore();
 const authStore = useAuthStore();
 const router = useRouter();
+const route = useRoute();
 
 const isAdmin = computed(() => authStore.user?.role === 'admin');
 const menuOpen = ref(false);
@@ -44,9 +45,8 @@ const handleLogout = async () => {
         <router-link v-if="authStore.isLoggedIn && authStore.isActive" to="/about" @click="closeMenu">À propos</router-link>
         <router-link v-if="authStore.isLoggedIn && authStore.isActive" to="/live" @click="closeMenu">La Brasserie</router-link>
         <router-link v-if="authStore.isLoggedIn && authStore.isActive" to="/contact" @click="closeMenu">Contact</router-link>
-        <!-- <router-link to="/dashboard">Dashboard</router-link> -->
-        <router-link v-if="isAdmin" to="/admin" @click="closeMenu">Admin</router-link>
-        
+        <router-link v-if="isAdmin" to="/admin/users" @click="closeMenu" :class="{ 'custom-active': route.path.startsWith('/admin') }">Admin</router-link>
+
         <!-- Mobile auth actions -->
         <div class="mobile-auth">
           <template v-if="authStore.isLoggedIn">
@@ -158,7 +158,8 @@ const handleLogout = async () => {
   white-space: nowrap;
 }
 
-.nav a.router-link-exact-active {
+.nav a.router-link-exact-active,
+.nav a.custom-active {
   color: var(--primary-color);
   border-bottom-color: var(--primary-color);
 }
@@ -351,7 +352,8 @@ const handleLogout = async () => {
     text-align: center;
   }
 
-  .nav a.router-link-exact-active {
+  .nav a.router-link-exact-active,
+  .nav a.custom-active {
     border-bottom: none;
     color: var(--primary-color);
   }

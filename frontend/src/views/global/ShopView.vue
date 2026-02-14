@@ -3,7 +3,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import BeerCard from '@/components/BeerCard.vue';
 import BeerFilters from '@/components/BeerFilters.vue';
-import { API_URL } from '@/config/api';
+import { API_URL } from '@/config/api.ts';
 import type { Beer } from '@/types';
 
 // Filtres, price sera mis à jour après le fetch

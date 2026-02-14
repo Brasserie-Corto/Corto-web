@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useAuthStore } from '@/store/auth';
-import { API_URL, PAYMENT_PHONE } from '@/config/api';
+import { useAuthStore } from '@/store/auth.ts';
+import { API_URL, PAYMENT_PHONE } from '@/config/api.ts';
 import type { Order } from '@/types';
 
 const authStore = useAuthStore();
