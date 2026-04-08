@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useAuthStore } from '@/store/auth.ts';
 import { supabase } from '@/config/supabase.ts';
 import AdminMenu from '@/components/admin/AdminMenu.vue';
+import {API_URL} from "@/config/api.ts";
 
 interface ClientUser {
   id: number;
@@ -128,23 +129,12 @@ async function rejectUser(userId: number) {
 
   try {
     rejectingId.value = userId;
-
     const user = users.value.find(u => u.id === userId);
     if (!user?.user_id) throw new Error('User not found');
-
-    // Delete from Supabase Auth
-    const { error: deleteAuthError } = await supabase.auth.admin.deleteUser(user.user_id);
-    if (deleteAuthError) throw deleteAuthError;
-
-    // Delete from client table
-    const { error: deleteClientError } = await supabase
-      .from('client')
-      .delete()
-      .eq('id', userId);
-
-    if (deleteClientError) throw deleteClientError;
-
-    // Update local state
+    const response = await fetch(`${API_URL}/admin/users/${user.user_id}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Error while deleting');
     users.value = users.value.filter(u => u.id !== userId);
   } catch (err: any) {
     error.value = err.message || 'Failed to reject user';

@@ -5,6 +5,7 @@ import pg from "pg";
 import { WebSocketServer } from "ws";
 import http from "http";
 import nodemailer from "nodemailer";
+import { createClient } from '@supabase/supabase-js';
 
 env.config();
 
@@ -12,6 +13,11 @@ const { Pool } = pg;
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
+
+const supabaseAdmin = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 const app = express();
 const server = http.createServer(app);
@@ -784,6 +790,27 @@ app.post("/send-contact-email", async (req, res) => {
   } catch (err) {
     console.error("Error sending email:", err);
     res.status(500).json({ error: "Failed to send email" });
+  }
+});
+
+app.delete("/admin/users/:authId", async (req, res) => {
+  const {
+    authId
+  } = req.params;
+  try {
+    const {
+      error: authError
+    } = await supabaseAdmin.auth.admin.deleteUser(authId);
+    if (authError) {
+      throw authError;
+    }
+    await pool.query("DELETE FROM client WHERE user_id = $1", [authId]);
+    res.json({ message: "User deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: "Error while deleting user"
+    });
   }
 });
 
