@@ -5,6 +5,7 @@ import pg from "pg";
 import { WebSocketServer } from "ws";
 import http from "http";
 import nodemailer from "nodemailer";
+import { createClient } from "@supabase/supabase-js";
 
 env.config();
 
@@ -12,6 +13,11 @@ const { Pool } = pg;
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
+
+const supabaseAdmin = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 const app = express();
 const server = http.createServer(app);
@@ -32,7 +38,6 @@ const broadcast = (data) => {
   });
 };
 
-// Broadcast stock update to all clients
 const broadcastStockUpdate = async () => {
   try {
     const { rows } = await pool.query("SELECT * FROM available_stock");
@@ -489,11 +494,13 @@ app.post("/orders", async (req, res) => {
 
     // Determine final amount (custom vs calculated)
     let finalAmount = calculatedTotal;
+    let extraAmount = 0;
     if (customAmount !== undefined) {
       const parsedCustom = parseFloat(customAmount);
       // Ensure custom amount isn't less than calculated total (validation)
       if (!isNaN(parsedCustom) && parsedCustom >= calculatedTotal) {
         finalAmount = parsedCustom;
+        extraAmount = finalAmount - subtotalAfterDiscount;
       }
     }
 
@@ -603,6 +610,7 @@ app.get("/orders/client/:clientId", async (req, res) => {
                 'price', ct.price
               )) as items
        FROM command c
+       LEFT JOIN promotion p ON p.id = c.id_promotion
        LEFT JOIN content ct ON ct.id_comand = c.id
        LEFT JOIN beer b ON b.id = ct.id_beer
        LEFT JOIN recipe r ON r.id = b.id_recipe
@@ -616,7 +624,10 @@ app.get("/orders/client/:clientId", async (req, res) => {
     const orders = rows.map(order => ({
       ...order,
       amount: parseFloat(order.amount),
-      items: order.items?.map((item) => ({
+      initial_amount: parseFloat(order.initial_amount || order.amount),
+      discount_amount: parseFloat(order.discount_amount || 0),
+      extra_amount: parseFloat(order.extra_amount || 0),
+      items: order.items?.filter(item => item.beer_id !== null).map((item) => ({
         ...item,
         quantity: parseInt(item.quantity),
         price: parseFloat(item.price)
@@ -636,8 +647,11 @@ app.get("/orders/:orderId", async (req, res) => {
     const { orderId } = req.params;
     
     const orderResult = await pool.query(
-      "SELECT * FROM command WHERE id = $1",
-      [orderId]
+        `SELECT c.*, p.code as promo_code 
+       FROM command c 
+       LEFT JOIN promotion p ON p.id = c.id_promotion 
+       WHERE c.id = $1`,
+        [orderId]
     );
     
     if (orderResult.rows.length === 0) {
@@ -650,9 +664,9 @@ app.get("/orders/:orderId", async (req, res) => {
        JOIN beer b ON b.id = ct.id_beer
        JOIN recipe r ON r.id = b.id_recipe
        WHERE ct.id_comand = $1`,
-      [orderId]
+        [orderId]
     );
-    
+
     const order = orderResult.rows[0];
     const items = itemsResult.rows.map(item => ({
       ...item,
@@ -661,11 +675,14 @@ app.get("/orders/:orderId", async (req, res) => {
       imageUrl: `${process.env.SUPABASE_URL}/storage/v1/object/public/${item.image?.replace('beer/', 'beers/') || item.image}`,
       subtotal: parseFloat(item.price) * parseInt(item.quantity)
     }));
-    
-    res.json({ 
-      ...order, 
+
+    res.json({
+      ...order,
       amount: parseFloat(order.amount),
-      items 
+      initial_amount: parseFloat(order.initial_amount || order.amount),
+      discount_amount: parseFloat(order.discount_amount || 0),
+      extra_amount: parseFloat(order.extra_amount || 0),
+      items
     });
   } catch (err) {
     console.error(err);
@@ -693,22 +710,19 @@ app.patch("/orders/:orderId/status", async (req, res) => {
     if (rows.length === 0) {
       return res.status(404).json({ error: "Order not found" });
     }
-    
-    // Broadcast order update
+
     broadcast({ type: "ORDER_UPDATE", data: rows[0] });
-    
+
     res.json(rows[0]);
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-// Get all orders (admin)
 app.get("/admin/orders", async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT c.*, 
+        `SELECT c.*, p.code as promo_code,
               cl.name as client_name, 
               cl.lastname as client_lastname,
               cl.mail as client_email,
@@ -723,11 +737,12 @@ app.get("/admin/orders", async (req, res) => {
               )) as items
        FROM command c
        JOIN client cl ON cl.id = c.id_client
+       LEFT JOIN promotion p ON p.id = c.id_promotion
        LEFT JOIN content ct ON ct.id_comand = c.id
        LEFT JOIN beer b ON b.id = ct.id_beer
        LEFT JOIN recipe r ON r.id = b.id_recipe
        LEFT JOIN contening cn ON cn.id = ct.id_contening
-       GROUP BY c.id, cl.name, cl.lastname, cl.mail, cl.phone
+       GROUP BY c.id, cl.name, cl.lastname, cl.mail, cl.phone, p.code
        ORDER BY c.order_date DESC`
     );
     
@@ -735,6 +750,9 @@ app.get("/admin/orders", async (req, res) => {
     const orders = rows.map(order => ({
       ...order,
       amount: parseFloat(order.amount),
+      initial_amount: parseFloat(order.initial_amount || order.amount),
+      discount_amount: parseFloat(order.discount_amount || 0),
+      extra_amount: parseFloat(order.extra_amount || 0),
       items: order.items?.filter(item => item.beer_id !== null).map((item) => ({
         ...item,
         quantity: parseInt(item.quantity),
@@ -784,6 +802,20 @@ app.post("/send-contact-email", async (req, res) => {
   } catch (err) {
     console.error("Error sending email:", err);
     res.status(500).json({ error: "Failed to send email" });
+  }
+});
+
+app.delete("/admin/users/:authId", async (req, res) => {
+  const { authId } = req.params;
+  try {
+    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(authId);
+    if (authError) {
+      throw authError;
+    }
+    await pool.query("DELETE FROM client WHERE user_id = $1", [authId]);
+    res.json({ message: "User deleted" });
+  } catch (err) {
+    res.status(500).json({ error: "Error while deleting user" });
   }
 });
 

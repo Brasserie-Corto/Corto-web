@@ -73,8 +73,23 @@ const formatDate = (dateString: string) => {
           </div>
         </div>
 
+        <div class="order-breakdown">
+          <div v-if="order.initial_amount !== undefined && order.initial_amount !== order.amount" class="breakdown-line">
+            <span>Sous-total articles</span>
+            <span>{{ order.initial_amount.toFixed(2) }}€</span>
+          </div>
+          <div v-if="order.promo_code" class="breakdown-line promo">
+            <span>Code promo ({{ order.promo_code }})</span>
+            <span>-{{ (order.discount_amount || 0).toFixed(2) }}€</span>
+          </div>
+          <div v-if="order.extra_amount && order.extra_amount > 0" class="breakdown-line extra">
+            <span>Don </span>
+            <span>+{{ order.extra_amount.toFixed(2) }}€</span>
+          </div>
+        </div>
+
         <div class="order-total">
-          <span>Total</span>
+          <span>Total à payer</span>
           <span class="total-amount">{{ order.amount.toFixed(2) }}€</span>
         </div>
       </div>
@@ -219,11 +234,39 @@ const formatDate = (dateString: string) => {
   font-size: 1.1rem;
 }
 
+.order-breakdown {
+  background: #f8fafc;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1.5rem;
+}
+
+.breakdown-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95rem;
+  color: #475569;
+  margin-bottom: 0.5rem;
+}
+
+.breakdown-line:last-child {
+  margin-bottom: 0;
+}
+
+.breakdown-line.promo {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.breakdown-line.extra {
+  color: #8b5cf6;
+}
+
 .order-total {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 1.5rem;
+  margin-top: 1rem;
   padding-top: 1.5rem;
   border-top: 2px solid var(--secondary-color);
   font-size: 1.25rem;

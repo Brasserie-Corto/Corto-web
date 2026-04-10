@@ -8,6 +8,7 @@ const router = useRouter();
 const now = ref(new Date());
 let timerInterval: number | null = null;
 const customTotal = ref(0);
+const promoInput = ref('');
 
 onMounted(async () => {
   await cartStore.fetchCart();
@@ -88,6 +89,16 @@ const validateInput = () => {
   }
 };
 
+const handleApplyPromo = async () => {
+  if (!promoInput.value) return;
+  await cartStore.applyPromo(promoInput.value.toUpperCase());
+};
+
+const handleRemovePromo = () => {
+  promoInput.value = '';
+  cartStore.removePromo();
+};
+
 const handleCheckout = async () => {
   const order = await cartStore.checkout(customTotal.value);
   if (order) {
@@ -156,7 +167,34 @@ const handleExtendTime = () => {
           </div>
         </div>
       </div>
+
       <div class="cart-summary">
+
+        <div class="promo-section">
+          <label>Code Promo</label>
+          <div v-if="cartStore.promoCode" class="active-promo">
+            <span class="promo-badge">{{ cartStore.promoCode }}</span>
+            <span class="promo-discount">-{{ cartStore.discountAmount.toFixed(2) }}€</span>
+            <button @click="handleRemovePromo" class="remove-promo-btn">&times;</button>
+          </div>
+          <div v-else class="promo-input-group">
+            <input v-model="promoInput" type="text" placeholder="Entrez votre code" style="text-transform: uppercase;" />
+            <button @click="handleApplyPromo" class="btn-apply-promo" :disabled="!promoInput">Appliquer</button>
+          </div>
+          <div v-if="cartStore.promoError" class="promo-error">{{ cartStore.promoError }}</div>
+        </div>
+
+        <div class="summary-breakdown">
+          <div class="summary-line">
+            <span>Sous-total articles</span>
+            <span>{{ cartStore.rawTotalPrice.toFixed(2) }}€</span>
+          </div>
+          <div v-if="cartStore.promoCode" class="summary-line discount-line">
+            <span>Réduction ({{ cartStore.promoCode }})</span>
+            <span>-{{ cartStore.discountAmount.toFixed(2) }}€</span>
+          </div>
+        </div>
+
         <h2>Total à payer</h2>
 
         <div class="price-editor">
@@ -187,7 +225,7 @@ const handleExtendTime = () => {
         </div>
 
         <p v-if="isModified" class="initial-price-info">
-          Prix initial : {{ initialTotal.toFixed(2) }}€
+          Prix initial calculé : {{ initialTotal.toFixed(2) }}€
         </p>
 
         <button @click="handleCheckout" class="checkout-btn" :disabled="cartStore.loading">
@@ -370,6 +408,97 @@ const handleExtendTime = () => {
   padding-top: 2rem;
 }
 
+.promo-section {
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 1.5rem;
+  background: #f8fafc;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.promo-section label {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.promo-input-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.promo-input-group input {
+  flex: 1;
+  margin: 0;
+  padding: 0.5rem;
+  border: 1px solid #cbd5e1;
+}
+
+.btn-apply-promo {
+  padding: 0.5rem 1rem;
+  background: var(--secondary-color);
+  font-size: 0.9rem;
+}
+
+.active-promo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #dcfce7;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #bbf7d0;
+}
+
+.promo-badge {
+  font-weight: bold;
+  color: #166534;
+  letter-spacing: 1px;
+}
+
+.promo-discount {
+  font-weight: bold;
+  color: #15803d;
+}
+
+.remove-promo-btn {
+  background: none;
+  border: none;
+  color: #166534;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0 0.5rem;
+}
+
+.promo-error {
+  color: #ef4444;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.summary-breakdown {
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.summary-line {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  color: #475569;
+}
+
+.discount-line {
+  color: #10b981;
+  font-weight: 600;
+}
+
 .cart-summary h2 {
   margin-bottom: 1rem;
 }
@@ -469,7 +598,7 @@ const handleExtendTime = () => {
 
 .checkout-btn {
   width: 100%;
-  max-width: 300px;
+  max-width: 400px;
   margin-top: 1rem;
 }
 
@@ -527,6 +656,10 @@ const handleExtendTime = () => {
 
   .cart-summary {
     align-items: stretch;
+  }
+
+  .promo-section, .summary-breakdown {
+    max-width: 100%;
   }
 
   .price-editor {
