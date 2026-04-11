@@ -25,9 +25,8 @@ export const useCartStore = defineStore('cart', () => {
   });
 
   const totalPrice = computed(() => {
-    return items.value
-      .reduce((total, item) => total + item.price * item.quantity, 0)
-      .toFixed(2);
+    const discounted = rawTotalPrice.value - discountAmount.value;
+    return Math.max(0, discounted).toFixed(2);
   });
 
   const timeRemaining = computed(() => {
@@ -313,6 +312,7 @@ export const useCartStore = defineStore('cart', () => {
       return data.order;
     } catch (err: any) {
       error.value = err.message;
+      console.error('Error during checkout:', err);
       return null;
     } finally {
       loading.value = false;

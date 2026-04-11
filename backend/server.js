@@ -454,15 +454,61 @@ app.post("/cart/extend/:clientId", async (req, res) => {
   }
 });
 
-// =====================
-// ORDER ROUTES
-// =====================
+// --------------------------------------------------------
+// ROUTE PROMOTIONS
+// --------------------------------------------------------
+app.post("/promotions/validate", async (req, res) => {
+  try {
+    const { code, amount } = req.body;
+    if (!code || amount === undefined) {
+      return res.status(400).json({ error: "Code and amount are required" });
+    }
 
-// Create order from cart (checkout)
+    const { rows } = await pool.query(
+        `SELECT * FROM promotion 
+       WHERE code = $1 AND is_active = true 
+       AND (max_uses IS NULL OR current_uses < max_uses)
+       AND (start_date IS NULL OR start_date <= NOW())
+       AND (end_date IS NULL OR end_date >= NOW())`,
+        [code]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Code promo invalide ou expiré." });
+    }
+
+    const promo = rows[0];
+    const minAmount = parseFloat(promo.min_amount) || 0;
+
+    if (amount < minAmount) {
+      return res.status(400).json({ error: `Le montant minimum pour ce code est de ${minAmount}€.` });
+    }
+
+    let discountAmount = 0;
+    if (promo.type === 'percentage') {
+      discountAmount = amount * (parseFloat(promo.value) / 100);
+    } else {
+      discountAmount = parseFloat(promo.value);
+    }
+
+    if (discountAmount > amount) {
+      discountAmount = amount;
+    }
+
+    res.json({ promotion: promo, discountAmount });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// --------------------------------------------------------
+// ROUTE ORDERS
+// --------------------------------------------------------
 app.post("/orders", async (req, res) => {
   const client = await pool.connect();
   try {
-    const { clientId, customAmount } = req.body;
+    const { clientId, customAmount, promoCode } = req.body;
 
     if (!clientId) {
       return res.status(400).json({ error: "clientId is required" });
@@ -492,31 +538,65 @@ app.post("/orders", async (req, res) => {
         0
     );
 
-    // Determine final amount (custom vs calculated)
-    let finalAmount = calculatedTotal;
-    let extraAmount = 0;
-    if (customAmount !== undefined) {
-      const parsedCustom = parseFloat(customAmount);
-      // Ensure custom amount isn't less than calculated total (validation)
-      if (!isNaN(parsedCustom) && parsedCustom >= calculatedTotal) {
-        finalAmount = parsedCustom;
-        extraAmount = finalAmount - subtotalAfterDiscount;
+    let discountAmount = 0;
+    let promoId = null;
+
+    if (promoCode) {
+      const promoResult = await client.query(
+          `SELECT * FROM promotion 
+         WHERE code = $1 AND is_active = true 
+         AND (max_uses IS NULL OR current_uses < max_uses)
+         AND (start_date IS NULL OR start_date <= NOW())
+         AND (end_date IS NULL OR end_date >= NOW())`,
+          [promoCode]
+      );
+
+      if (promoResult.rows.length > 0) {
+        const promo = promoResult.rows[0];
+        const minAmount = parseFloat(promo.min_amount) || 0;
+        if (calculatedTotal >= minAmount) {
+          promoId = promo.id;
+          if (promo.type === 'percentage') {
+            discountAmount = calculatedTotal * (parseFloat(promo.value) / 100);
+          } else {
+            discountAmount = parseFloat(promo.value);
+          }
+          if (discountAmount > calculatedTotal) {
+            discountAmount = calculatedTotal;
+          }
+        }
       }
     }
 
-    // Create order
+    const discountedTotal = calculatedTotal - discountAmount;
+    let finalAmount = discountedTotal;
+    let extraAmount = 0;
+
+    if (customAmount !== undefined) {
+      const parsedCustom = parseFloat(customAmount);
+      if (!isNaN(parsedCustom) && parsedCustom >= discountedTotal) {
+        finalAmount = parsedCustom;
+        extraAmount = parsedCustom - discountedTotal;
+      }
+    }
+
     const orderResult = await client.query(
-        `INSERT INTO command (id_client, amount, status)
-         VALUES ($1, $2, 'en attente de paiement')
+        `INSERT INTO command (id_client, amount, status, initial_amount, id_promotion, discount_amount, extra_amount)
+         VALUES ($1, $2, 'en attente de paiement', $3, $4, $5, $6)
            RETURNING *`,
-        [clientId, finalAmount]
+        [clientId, finalAmount, calculatedTotal, promoId, discountAmount, extraAmount]
     );
-    
+
     const order = orderResult.rows[0];
-    
-    // For each reservation, find a beer and add to content
+
+    if (promoId) {
+      await client.query(
+          "UPDATE promotion SET current_uses = current_uses + 1 WHERE id = $1",
+          [promoId]
+      );
+    }
+
     for (const reservation of reservations) {
-      // Find beers of this recipe with stock
       const beersResult = await client.query(
         `SELECT b.id, s.quantity as stock_qty
          FROM beer b
@@ -602,7 +682,8 @@ app.get("/orders/client/:clientId", async (req, res) => {
     const { clientId } = req.params;
     
     const { rows } = await pool.query(
-      `SELECT c.*, 
+        `SELECT c.*, 
+              p.code as promo_code,
               json_agg(json_build_object(
                 'beer_id', ct.id_beer,
                 'quantity', ct.quantity,
@@ -610,12 +691,12 @@ app.get("/orders/client/:clientId", async (req, res) => {
                 'price', ct.price
               )) as items
        FROM command c
-       LEFT JOIN promotion p ON p.id = c.id_promotion
        LEFT JOIN content ct ON ct.id_comand = c.id
        LEFT JOIN beer b ON b.id = ct.id_beer
        LEFT JOIN recipe r ON r.id = b.id_recipe
+       LEFT JOIN promotion p ON p.id = c.id_promotion
        WHERE c.id_client = $1
-       GROUP BY c.id
+       GROUP BY c.id, p.code
        ORDER BY c.order_date DESC`,
       [clientId]
     );
@@ -645,7 +726,7 @@ app.get("/orders/client/:clientId", async (req, res) => {
 app.get("/orders/:orderId", async (req, res) => {
   try {
     const { orderId } = req.params;
-    
+
     const orderResult = await pool.query(
         `SELECT c.*, p.code as promo_code 
        FROM command c 
@@ -715,6 +796,7 @@ app.patch("/orders/:orderId/status", async (req, res) => {
 
     res.json(rows[0]);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
@@ -722,7 +804,8 @@ app.patch("/orders/:orderId/status", async (req, res) => {
 app.get("/admin/orders", async (req, res) => {
   try {
     const { rows } = await pool.query(
-        `SELECT c.*, p.code as promo_code,
+        `SELECT c.*, 
+              p.code as promo_code,
               cl.name as client_name, 
               cl.lastname as client_lastname,
               cl.mail as client_email,
@@ -815,6 +898,7 @@ app.delete("/admin/users/:authId", async (req, res) => {
     await pool.query("DELETE FROM client WHERE user_id = $1", [authId]);
     res.json({ message: "User deleted" });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Error while deleting user" });
   }
 });

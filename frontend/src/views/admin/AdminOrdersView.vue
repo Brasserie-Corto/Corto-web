@@ -203,7 +203,7 @@ onMounted(fetchOrders);
 
           <div class="order-breakdown">
             <div v-if="order.initial_amount !== undefined" class="breakdown-line">
-              <span>Total articles :</span>
+              <span>Prix initial :</span>
               <span>{{ order.initial_amount.toFixed(2) }}€</span>
             </div>
             <div v-if="order.promo_code" class="breakdown-line promo">
