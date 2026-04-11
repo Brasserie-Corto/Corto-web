@@ -75,7 +75,7 @@ const formatDate = (dateString: string) => {
 
         <div class="order-breakdown">
           <div v-if="order.initial_amount !== undefined && order.initial_amount !== order.amount" class="breakdown-line">
-            <span>Sous-total articles</span>
+            <span>Prix initial</span>
             <span>{{ order.initial_amount.toFixed(2) }}€</span>
           </div>
           <div v-if="order.promo_code" class="breakdown-line promo">
@@ -83,13 +83,13 @@ const formatDate = (dateString: string) => {
             <span>-{{ (order.discount_amount || 0).toFixed(2) }}€</span>
           </div>
           <div v-if="order.extra_amount && order.extra_amount > 0" class="breakdown-line extra">
-            <span>Don </span>
+            <span>Don</span>
             <span>+{{ order.extra_amount.toFixed(2) }}€</span>
           </div>
         </div>
 
         <div class="order-total">
-          <span>Total à payer</span>
+          <span>Reste à payer</span>
           <span class="total-amount">{{ order.amount.toFixed(2) }}€</span>
         </div>
       </div>
