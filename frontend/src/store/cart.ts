@@ -10,16 +10,23 @@ export const useCartStore = defineStore('cart', () => {
   const error = ref<string | null>(null);
   const expiresAt = ref<Date | null>(null);
 
+  const promoCode = ref<string>('');
+  const discountAmount = ref<number>(0);
+  const promoError = ref<string | null>(null);
+
   const authStore = useAuthStore();
 
   const totalItems = computed(() => {
     return items.value.reduce((total, item) => total + item.quantity, 0);
   });
 
+  const rawTotalPrice = computed(() => {
+    return items.value.reduce((total, item) => total + item.price * item.quantity, 0);
+  });
+
   const totalPrice = computed(() => {
-    return items.value
-      .reduce((total, item) => total + item.price * item.quantity, 0)
-      .toFixed(2);
+    const discounted = rawTotalPrice.value - discountAmount.value;
+    return Math.max(0, discounted).toFixed(2);
   });
 
   const timeRemaining = computed(() => {
@@ -50,6 +57,11 @@ export const useCartStore = defineStore('cart', () => {
         expiresAt.value = new Date(data[0].expires_at);
       } else {
         expiresAt.value = null;
+        removePromo();
+      }
+
+      if (promoCode.value && items.value.length > 0) {
+        await applyPromo(promoCode.value);
       }
     } catch (err: any) {
       error.value = err.message;
@@ -195,6 +207,7 @@ export const useCartStore = defineStore('cart', () => {
       await fetch(`${API_URL}/cart/${clientId}`, { method: 'DELETE' });
       items.value = [];
       expiresAt.value = null;
+      removePromo();
     } catch (err: any) {
       error.value = err.message;
       console.error('Error clearing cart:', err);
@@ -222,6 +235,49 @@ export const useCartStore = defineStore('cart', () => {
     }
   }
 
+  async function applyPromo(code: string) {
+    promoError.value = null;
+    try {
+      loading.value = true;
+      const response = await fetch(`${API_URL}/promotions/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, amount: rawTotalPrice.value }),
+      });
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Le serveur a planté ou la route n'existe pas (Statut: ${response.status}). As-tu bien redémarré le backend ?`);
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        promoError.value = data.error;
+        discountAmount.value = 0;
+        promoCode.value = '';
+        return false;
+      }
+
+      promoCode.value = code;
+      discountAmount.value = data.discountAmount;
+      return true;
+    } catch (err: any) {
+      promoError.value = err.message || 'Erreur lors de la validation du code';
+      discountAmount.value = 0;
+      promoCode.value = '';
+      return false;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  function removePromo() {
+    promoCode.value = '';
+    discountAmount.value = 0;
+    promoError.value = null;
+  }
+
   // Checkout - create order
   async function checkout(customTotal?: number) {
     const clientId = authStore.user?.clientId;
@@ -233,16 +289,15 @@ export const useCartStore = defineStore('cart', () => {
     try {
       loading.value = true;
       error.value = null;
-
       const response = await fetch(`${API_URL}/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientId,
-          customAmount: customTotal
+          customAmount: customTotal,
+          promoCode: promoCode.value
         }),
       });
-
       const data = await response.json();
 
       if (!response.ok) {
@@ -250,9 +305,9 @@ export const useCartStore = defineStore('cart', () => {
         return null;
       }
 
-      // Clear local cart
       items.value = [];
       expiresAt.value = null;
+      removePromo();
 
       return data.order;
     } catch (err: any) {
@@ -269,7 +324,11 @@ export const useCartStore = defineStore('cart', () => {
     loading,
     error,
     expiresAt,
+    promoCode,
+    discountAmount,
+    promoError,
     totalItems,
+    rawTotalPrice,
     totalPrice,
     timeRemaining,
     fetchCart,
@@ -280,6 +339,8 @@ export const useCartStore = defineStore('cart', () => {
     removeItem,
     clearCart,
     extendTime,
+    applyPromo,
+    removePromo,
     checkout,
   };
 });

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCartStore } from '@/store/cart.ts';
 
@@ -7,12 +7,12 @@ const cartStore = useCartStore();
 const router = useRouter();
 const now = ref(new Date());
 let timerInterval: number | null = null;
-const customTotal = ref(0);
+
+const tipAmount = ref<number>(0);
+const promoInput = ref('');
 
 onMounted(async () => {
   await cartStore.fetchCart();
-  // Init customTotal with store value
-  customTotal.value = parseFloat(cartStore.totalPrice);
 
   timerInterval = window.setInterval(() => {
     now.value = new Date();
@@ -23,15 +23,6 @@ onUnmounted(() => {
   if (timerInterval) clearInterval(timerInterval);
 });
 
-// Watch for price changes from store
-watch(() => cartStore.totalPrice, (newVal) => {
-  const val = parseFloat(newVal);
-  if (!isNaN(val)) {
-    customTotal.value = val;
-  }
-});
-
-// Computed countdown
 const countdown = computed(() => {
   if (!cartStore.expiresAt) return null;
   const diff = cartStore.expiresAt.getTime() - now.value.getTime();
@@ -45,51 +36,37 @@ const isExpiringSoon = computed(() => {
   return countdown.value && !countdown.value.expired && countdown.value.minutes < 5;
 });
 
-const initialTotal = computed(() => parseFloat(cartStore.totalPrice));
-
-const isModified = computed(() => {
-  return customTotal.value > initialTotal.value;
-});
-
-const canRoundUp = computed(() => {
-  // Show round up button only if decimal part exists
-  return customTotal.value % 1 !== 0;
+const finalTotal = computed(() => {
+  const base = parseFloat(cartStore.totalPrice);
+  const tip = typeof tipAmount.value === 'number' && !isNaN(tipAmount.value) ? tipAmount.value : 0;
+  return base + tip;
 });
 
 const roundUpDiff = computed(() => {
-  if (!canRoundUp.value) return 0;
-  const nextInt = Math.ceil(customTotal.value);
-  return (nextInt - customTotal.value).toFixed(2);
+  const current = finalTotal.value;
+  if (current % 1 === 0) return 0;
+  return (Math.ceil(current) - current).toFixed(2);
 });
 
 const handleRoundUp = () => {
-  customTotal.value = Math.ceil(customTotal.value);
-};
-
-const handleIncrement = () => {
-  customTotal.value += 1;
-};
-
-const handleDecrement = () => {
-  if (customTotal.value - 1 >= initialTotal.value) {
-    customTotal.value -= 1;
-  } else {
-    customTotal.value = initialTotal.value;
+  const diff = parseFloat(roundUpDiff.value);
+  if (diff > 0) {
+    tipAmount.value = Number((tipAmount.value + diff).toFixed(2));
   }
 };
 
-const validateInput = () => {
-  if (
-      typeof customTotal.value !== 'number' ||
-      isNaN(customTotal.value) ||
-      customTotal.value < initialTotal.value
-  ) {
-    customTotal.value = initialTotal.value;
-  }
+const handleApplyPromo = async () => {
+  if (!promoInput.value) return;
+  await cartStore.applyPromo(promoInput.value.toUpperCase());
+};
+
+const handleRemovePromo = () => {
+  promoInput.value = '';
+  cartStore.removePromo();
 };
 
 const handleCheckout = async () => {
-  const order = await cartStore.checkout(customTotal.value);
+  const order = await cartStore.checkout(finalTotal.value);
   if (order) {
     router.push({ name: 'OrderConfirmation', params: { orderId: order.id } });
   }
@@ -156,39 +133,55 @@ const handleExtendTime = () => {
           </div>
         </div>
       </div>
+
       <div class="cart-summary">
-        <h2>Total à payer</h2>
 
-        <div class="price-editor">
-          <button
-              v-if="canRoundUp"
-              @click="handleRoundUp"
-              class="round-up-btn"
-          >
-            Arrondir (+{{ roundUpDiff }}€)
-          </button>
+        <div class="promo-section">
+          <label>Code Promo</label>
+          <div v-if="cartStore.promoCode" class="active-promo">
+            <span class="promo-badge">{{ cartStore.promoCode }}</span>
+            <span class="promo-discount">-{{ cartStore.discountAmount.toFixed(2) }}€</span>
+            <button @click="handleRemovePromo" class="remove-promo-btn">&times;</button>
+          </div>
+          <div v-else class="promo-input-group">
+            <input v-model="promoInput" type="text" placeholder="Entrez votre code" style="text-transform: uppercase;" />
+            <button @click="handleApplyPromo" class="btn-apply-promo" :disabled="!promoInput">Appliquer</button>
+          </div>
+          <div v-if="cartStore.promoError" class="promo-error">{{ cartStore.promoError }}</div>
+        </div>
 
-          <div class="price-input-wrapper">
-            <input
-                type="number"
-                v-model.number="customTotal"
-                @change="validateInput"
-                @blur="validateInput"
-                :min="initialTotal"
-                step="0.01"
-                class="price-input"
-            />
-            <div class="price-controls">
-              <button @click="handleIncrement" class="control-btn up">▲</button>
-              <button @click="handleDecrement" class="control-btn down">▼</button>
+        <div class="summary-breakdown">
+          <div class="summary-line">
+            <span>Prix initial</span>
+            <span>{{ cartStore.rawTotalPrice.toFixed(2) }}€</span>
+          </div>
+          <div v-if="cartStore.promoCode" class="summary-line discount-line">
+            <span>Code promo ({{ cartStore.promoCode }})</span>
+            <span>-{{ cartStore.discountAmount.toFixed(2) }}€</span>
+          </div>
+
+          <div class="tip-section">
+            <label>Soutenir la brasserie (Don)</label>
+            <div class="tip-controls">
+              <button @click="tipAmount = 0" :class="{active: tipAmount === 0}">0€</button>
+              <button @click="tipAmount = 2" :class="{active: tipAmount === 2}">2€</button>
+              <button @click="tipAmount = 5" :class="{active: tipAmount === 5}">5€</button>
+              <button @click="tipAmount = 10" :class="{active: tipAmount === 10}">10€</button>
+              <div class="custom-tip">
+                <input type="number" v-model.number="tipAmount" min="0" step="0.5" placeholder="Autre" />
+                <span>€</span>
+              </div>
             </div>
-            <span class="currency">€</span>
           </div>
         </div>
 
-        <p v-if="isModified" class="initial-price-info">
-          Prix initial : {{ initialTotal.toFixed(2) }}€
-        </p>
+        <div class="final-total-section">
+          <h2>Reste à payer : <span class="total-price">{{ finalTotal.toFixed(2) }}€</span></h2>
+
+          <button v-if="finalTotal % 1 !== 0" @click="handleRoundUp" class="round-up-btn">
+            Arrondir à {{ Math.ceil(finalTotal) }}€ (+{{ roundUpDiff }}€)
+          </button>
+        </div>
 
         <button @click="handleCheckout" class="checkout-btn" :disabled="cartStore.loading">
           {{ cartStore.loading ? 'Traitement...' : 'Passer commande' }}
@@ -370,107 +363,195 @@ const handleExtendTime = () => {
   padding-top: 2rem;
 }
 
-.cart-summary h2 {
-  margin-bottom: 1rem;
+.promo-section {
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 1.5rem;
+  background: #f8fafc;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
 }
 
-.price-editor {
+.promo-section label {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.promo-input-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.promo-input-group input {
+  flex: 1;
+  margin: 0;
+  padding: 0.5rem;
+  border: 1px solid #cbd5e1;
+}
+
+.btn-apply-promo {
+  padding: 0.5rem 1rem;
+  background: var(--secondary-color);
+  font-size: 0.9rem;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.active-promo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #dcfce7;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #bbf7d0;
+}
+
+.promo-badge {
+  font-weight: bold;
+  color: #166534;
+  letter-spacing: 1px;
+}
+
+.promo-discount {
+  font-weight: bold;
+  color: #15803d;
+}
+
+.remove-promo-btn {
+  background: none;
+  border: none;
+  color: #166534;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0 0.5rem;
+}
+
+.promo-error {
+  color: #ef4444;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.summary-breakdown {
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.summary-line {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  color: #475569;
+}
+
+.discount-line {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.tip-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--border-color);
+}
+
+.tip-section label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #334155;
+  font-size: 0.95rem;
+}
+
+.tip-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tip-controls button {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-color);
+  background: white;
+  color: #475569;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.tip-controls button:hover {
+  background: #f8fafc;
+}
+
+.tip-controls button.active {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.custom-tip {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.custom-tip input {
+  width: 80px;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  text-align: right;
+}
+
+.final-total-section {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-bottom: 1.5rem;
+}
+
+.final-total-section h2 {
+  margin: 0 0 0.5rem 0;
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 0.5rem;
-  justify-content: flex-end;
 }
 
-.price-input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: stretch;
-  height: 50px;
-}
-
-.price-input {
-  font-size: 1.5rem;
-  font-weight: bold;
-  padding: 0 1rem;
-  width: 120px;
-  text-align: right;
-  border: 2px solid var(--border-color);
-  border-right: none;
-  border-radius: 6px 0 0 6px;
+.total-price {
   color: var(--primary-color);
-  background: white;
-  height: 100%;
+  font-size: 1.8rem;
 }
 
-.price-input::-webkit-outer-spin-button,
-.price-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.price-input[type=number] {
-  -moz-appearance: textfield;
-}
-
-.price-controls {
-  display: flex;
-  flex-direction: column;
-  width: 40px;
-}
-
-.control-btn {
-  flex: 1;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.9rem;
-  border: 2px solid var(--border-color);
-  background: #f1f3f5;
+.round-up-btn {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px dashed #cbd5e1;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
   cursor: pointer;
-  color: #333;
-  transition: all 0.2s;
-}
-
-.control-btn.up {
-  border-radius: 0 6px 0 0;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.control-btn.down {
-  border-radius: 0 0 6px 0;
-  border-top: none;
-}
-
-.control-btn:hover {
-  background: #e9ecef;
-  color: var(--primary-color);
-}
-
-.control-btn:active {
-  background: #dee2e6;
-}
-
-.currency {
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin-left: 0.75rem;
-  color: var(--text-color);
-  align-self: center;
-}
-
-.initial-price-info {
   font-size: 0.9rem;
-  color: #666;
-  font-style: italic;
-  margin-top: 0;
-  margin-bottom: 1.5rem;
+  transition: background 0.2s;
+}
+
+.round-up-btn:hover {
+  background: #e2e8f0;
 }
 
 .checkout-btn {
   width: 100%;
-  max-width: 300px;
-  margin-top: 1rem;
+  max-width: 400px;
 }
 
 .checkout-btn:disabled {
@@ -529,14 +610,12 @@ const handleExtendTime = () => {
     align-items: stretch;
   }
 
-  .price-editor {
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.75rem;
+  .promo-section, .summary-breakdown, .final-total-section {
+    max-width: 100%;
   }
 
-  .round-up-btn {
-    padding: 0.75rem 1rem;
+  .final-total-section {
+    align-items: center;
   }
 }
 </style>

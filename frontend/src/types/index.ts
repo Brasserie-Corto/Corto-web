@@ -42,11 +42,30 @@ export interface CartItem {
   expires_at: string;
 }
 
+export interface Promotion {
+  id: number;
+  code: string;
+  type: 'percentage' | 'fixed_conditional' | 'fixed';
+  value: number;
+  min_amount: number;
+  start_date: string | null;
+  end_date: string | null;
+  max_uses: number | null;
+  current_uses: number;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface Order {
   id: number;
   order_date: string;
   deliver_date?: string;
   amount: number;
+  initial_amount?: number;
+  id_promotion?: number;
+  promo_code?: string;
+  discount_amount?: number;
+  extra_amount?: number;
   status: string;
   items: OrderItem[];
 }
